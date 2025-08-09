@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sentient Memory Match</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --amber: #D8772B;       /* primary glow */
+      --amber-700:#7A2A14;    /* darker amber */
+      --teal:  #1E6A6B;       /* accent */
+      --ink:   #0A0B0D;       /* deep background */
+      --ink-2: #0E1114;
+      --card-size: 110px;
+      --ring: 0 0 0 3px rgba(216,119,43,.28);
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+
+    body{
+      display:flex; flex-direction:column; align-items:center; gap:1rem;
+      min-height:100vh; padding:1rem; color:#EDEFF2; background-color: var(--ink);
+      background:
+        url('images/bg.png') center/cover no-repeat fixed,
+        radial-gradient(55% 40% at 50% 105%, rgba(216,119,43,.22), transparent 70%),
+        linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%);
+    }
+
+    body::before{
+      content:""; position:fixed; inset:0; pointer-events:none;
+      background-image:
+        radial-gradient(rgba(30,106,107,.25) 1px, transparent 1px),
+        radial-gradient(rgba(216,119,43,.22) 1px, transparent 1px);
+      background-size: 160px 160px, 220px 220px;
+      background-position: 0 0, 80px 120px;
+      opacity:.18;
+    }
+
+    h1,h2{ text-align:center; color:var(--amber); }
+    h1{ font-size:2rem; line-height:1.2; text-shadow:0 0 18px rgba(216,119,43,.35); }
+
+    /* INTRO */
+    #intro{
+      position:fixed; inset:0; background:rgba(10,11,13,.86);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:1.2rem; text-align:center; padding:1.5rem;
+      box-shadow: var(--ring);
+      border-top:1px solid rgba(216,119,43,.2);
+      border-bottom:1px solid rgba(30,106,107,.2);
+      z-index: 50;
+    }
+    #intro p{ max-width:520px; line-height:1.45; color:#dbe3ea; }
+    #xname-input{
+      padding:.6rem 1rem; border-radius:10px; border:1px solid rgba(216,119,43,.35);
+      background:#0f1316; color:#fff; font-size:1rem; width:260px; box-shadow: var(--ring);
+    }
+
+    /* GAME INFO (optional small text) */
+    #game-info{ display:flex; gap:1.5rem; font-size:1.05rem; color:#dbe3ea; }
+
+    /* BOARD */
+    #board{
+      display:grid; grid-template-columns: repeat(4, var(--card-size));
+      grid-gap:10px; margin-top:.5rem;
+    }
+    .card{
+      position:relative; width:var(--card-size); height:var(--card-size);
+      perspective:600px; cursor:pointer;
+    }
+    .card img{
+      width:100%; height:100%; border-radius:12px; position:absolute; top:0; left:0;
+      backface-visibility:hidden; transition: transform .45s;
+      border:2px solid rgba(30,106,107,.28);
+      box-shadow: 0 0 10px rgba(30,106,107,.16);
+    }
+    .card .front{ transform: rotateY(180deg); }
+    .card .back { transform: rotateY(0deg); background:#12171b; }
+    .card.flip .front{ transform: rotateY(0deg); }
+    .card.flip .back { transform: rotateY(180deg); }
+    .card.matched{ cursor:default; }
+    .card.matched img{
+      border-color: rgba(216,119,43,.75);
+      box-shadow: 0 0 18px rgba(216,119,43,.45);
+    }
+
+    /* RESULT */
+    #result{
+      display:none; flex-direction:column; align-items:center; gap:.75rem;
+      padding:1.5rem 2rem; border:2px solid var(--amber);
+      border-radius:16px;
+      box-shadow: 0 0 16px rgba(216,119,43,.45), 0 0 24px rgba(30,106,107,.32) inset;
+      background: linear-gradient(180deg, rgba(15,19,22,.92), rgba(10,11,13,.92));
+      color:#eef3f7;
+      z-index: 10;
+    }
+
+    #buttons{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
+
+    button, a.button{
+      border:none; color:#0c0e0f; font-weight:800; cursor:pointer; text-decoration:none; letter-spacing:.2px;
+      padding:.65rem 1.25rem; border-radius:12px;
+      background: linear-gradient(90deg, var(--amber), var(--teal));
+      box-shadow: 0 6px 18px rgba(216,119,43,.35), 0 0 0 1px rgba(30,106,107,.25) inset;
+    }
+    .button-sm{ padding:.45rem .8rem; font-weight:700; font-size:.9rem; }
+    button[disabled]{ opacity:.6; cursor:not-allowed; }
+    button:not([disabled]):hover, a.button:hover{ filter:brightness(1.08); box-shadow:0 8px 22px rgba(216,119,43,.45); }
+    button:active, a.button:active{ transform: translateY(1px); }
+
+    /* HIDDEN SHARE CARD (for snapshot) */
+    #share-wrapper{ position:absolute; left:-10000px; top:-10000px; }
+    .share-card{
+      width:420px; height:240px; border-radius:16px;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.4rem;
+      color:#fff; border:4px solid var(--amber);
+      box-shadow:0 0 16px rgba(30,106,107,.5);
+      overflow: hidden;
+    }
+    .share-avatar{
+      width:56px; height:56px; border-radius:50%; border:3px solid var(--amber);
+      object-fit:cover;
+    }
+    .share-card h2{ margin-bottom:.1rem; font-size:1.5rem; color:var(--amber); }
+    .share-card p{ font-size:1rem; color:#f3e9e2; }
+
+    /* PLAYER BADGE (top-right) */
+    #player-badge{
+      position:fixed; top:1rem; right:1rem; z-index:20;
+      display:flex; align-items:center; gap:.6rem;
+      padding:.5rem .7rem; border-radius:999px;
+      background:linear-gradient(180deg,#14181c,#0b0d10);
+      border:1px solid rgba(216,119,43,.35);
+      box-shadow: var(--ring);
+      display:none;
+    }
+    #player-badge img{
+      width:36px; height:36px; border-radius:50%; object-fit:cover;
+      border:2px solid rgba(216,119,43,.6);
+    }
+    #player-badge span{ color:#e7edf3; font-weight:700; }
+
+    /* LIVE SCORE CARD (bottom center) */
+    #live-card-container{
+      position:fixed; left:0; right:0; bottom:12px; display:none; z-index:25;
+      display:flex; justify-content:center; pointer-events:none;
+    }
+    #live-card{
+      pointer-events:auto;
+      width:360px; max-width:90vw; border-radius:16px; padding:.75rem 1rem;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      border:2px solid var(--amber);
+      box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
+      display:flex; align-items:center; gap:.8rem;
+    }
+    #live-card img{ width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid rgba(216,119,43,.7); }
+    #live-meta{ display:flex; flex-direction:column; line-height:1.25; }
+    #live-name{ font-weight:800; color:var(--amber); }
+    #live-stats{ color:#e7edf3; opacity:.95; font-size:.95rem; }
+    #live-actions{ margin-left:auto; display:flex; gap:.5rem; }
+
+    /* CREDITS */
+    #credits{
+      position:fixed; bottom:1.2rem; right:1.2rem; max-width:180px;
+      font-size:1rem; line-height:1.3; text-align:right; opacity:.6;
+    }
+    #credits a{ color:var(--amber); text-decoration:underline; }
+
+    @media (max-width:500px){
+      #credits{ bottom:.6rem; right:.6rem; font-size:.8rem; }
+      #player-badge{ top:.6rem; right:.6rem; }
+      #live-card{ width:320px; }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Sentient Memory Match</h1>
+
+  <div id="game-info">
+    <span id="memorize-countdown"></span>
+    <span id="play-countdown"></span>
+    <span id="score-display"></span>
+  </div>
+
+  <div id="board"></div>
+
+  <!-- RESULT -->
+  <div id="result">
+    <h2>Congratulations!</h2>
+    <p id="result-message"></p>
+    <div id="buttons">
+      <a id="download-btn" class="button" href="#">Download Your Score Card</a>
+      <a id="share-btn" class="button" target="_blank" href="#">Share on X</a>
+      <button id="restart-btn" class="button">Restart</button>
+    </div>
+  </div>
+
+  <!-- INTRO OVERLAY (EN + TR) -->
+  <div id="intro">
+    <h2>How to Play / Nasıl Oynanır?</h2>
+    <p><strong>EN:</strong> Memorize the positions of all cards in 15 seconds. After that, the cards flip. Match as many pairs as you can in 20 seconds.</p>
+    <p><strong>TR:</strong> 15 saniye içinde tüm kartların yerlerini ezberleyin. Süre bitince kartlar kapanır. 20 saniyede mümkün olduğunca çok çifti eşleştirin.</p>
+    <input id="xname-input" type="text" placeholder="@X username" />
+    <button id="start-btn" class="button">Start / Başlat</button>
+  </div>
+
+  <!-- PLAYER BADGE -->
+  <div id="player-badge">
+    <img id="profile-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+    <span id="profile-handle">@player</span>
+  </div>
+
+  <!-- LIVE SCORE CARD (BOTTOM) -->
+  <div id="live-card-container">
+    <div id="live-card">
+      <img id="live-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+      <div id="live-meta">
+        <div id="live-name">@player</div>
+        <div id="live-stats">Matches: 0/8 • Time: 0s</div>
+      </div>
+      <div id="live-actions">
+        <a id="live-download-btn" class="button button-sm" href="#">Download</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN SHARE CARD TEMPLATE -->
+  <div id="share-wrapper">
+    <div class="share-card" id="share-card">
+      <img id="sc-avatar" class="share-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+      <h2 id="sc-title">Sentient Memory Match</h2>
+      <p id="sc-username">@player</p>
+      <p id="sc-score">Score: 0/8</p>
+      <p id="sc-time">Time left: 0s</p>
+    </div>
+  </div>
+
+  <div id="credits">
+    created by:<br>
+    <a href="https://twitter.com/cryptoayax" target="_blank">x:cryptoayax</a><br>
+    discord: cryptoayax
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    // CONFIG
+    const FRONT_IMAGES = [
+      "images/img1.png","images/img2.png","images/img3.png","images/img4.png",
+      "images/img5.png","images/img6.png","images/img7.png","images/img8.png"
+    ];
+    const BACK_IMAGE = "images/back.png";
+    const MEMORIZE_SECONDS = 15, PLAY_SECONDS = 20;
+
+    // DOM refs
+    const boardEl = document.getElementById("board"),
+          memorizeCd = document.getElementById("memorize-countdown"),
+          playCd = document.getElementById("play-countdown"),
+          scoreDisplay = document.getElementById("score-display"),
+          resultCard = document.getElementById("result"),
+          resultMsg = document.getElementById("result-message"),
+          downloadBtn = document.getElementById("download-btn"),
+          shareBtn = document.getElementById("share-btn"),
+          restartBtn = document.getElementById("restart-btn"),
+          intro = document.getElementById("intro"),
+          startBtn = document.getElementById("start-btn"),
+          xnameInput = document.getElementById("xname-input"),
+          playerBadge = document.getElementById("player-badge"),
+          profileAvatar = document.getElementById("profile-avatar"),
+          profileHandle = document.getElementById("profile-handle"),
+          liveContainer = document.getElementById("live-card-container"),
+          liveAvatar = document.getElementById("live-avatar"),
+          liveName = document.getElementById("live-name"),
+          liveStats = document.getElementById("live-stats"),
+          liveDownloadBtn = document.getElementById("live-download-btn"),
+          shareCard = document.getElementById("share-card"),
+          scAvatar = document.getElementById("sc-avatar"),
+          scUsername = document.getElementById("sc-username"),
+          scScore = document.getElementById("sc-score"),
+          scTime = document.getElementById("sc-time");
+
+    // STATE
+    let firstCard = null, lockBoard = false, matchedPairs = 0,
+        playTimer, playTimeLeft = PLAY_SECONDS, xname = "player",
+        isMemorizePhase = false, memorizeTimer, memorizeTimeLeft = MEMORIZE_SECONDS,
+        avatarUrl = "";
+
+    // Helpers for X handle & avatar
+    const sanitizeHandle = (v) => v.replace(/\s+/g,"").replace(/^@/,"");
+    const resolveAvatar = (handle) => `https://unavatar.io/x/${encodeURIComponent(handle)}`;
+
+    function setAllAvatars(url){
+      profileAvatar.src = url;
+      liveAvatar.src = url;
+      scAvatar.src = url;
+      // Fallbacks if avatar fails
+      profileAvatar.onerror = liveAvatar.onerror = scAvatar.onerror = () => {
+        profileAvatar.src = BACK_IMAGE;
+        liveAvatar.src = BACK_IMAGE;
+        scAvatar.src = BACK_IMAGE;
+      };
+    }
+
+    // INTRO -> START
+    startBtn.addEventListener("click", async () => {
+      const val = sanitizeHandle(xnameInput.value || "");
+      if (!val) { alert("Lütfen X kullanıcı adınızı girin (örn. @sizinadiniz)."); return; }
+      xname = val;
+      avatarUrl = resolveAvatar(xname);
+      setAllAvatars(avatarUrl);
+      profileHandle.textContent = "@" + xname;
+      liveName.textContent = "@" + xname;
+      scUsername.textContent = "@" + xname;
+
+      playerBadge.style.display = "flex";
+      liveContainer.style.display = "flex";
+      intro.style.display = "none";
+      initGame();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resultCard.style.display = "none";
+      boardEl.style.pointerEvents = "all";
+      initGame();
+    });
+
+    // INIT
+    function initGame(){
+      // clear timers if any
+      clearInterval(memorizeTimer); clearInterval(playTimer);
+      matchedPairs = 0; firstCard = null; lockBoard = false;
+      memorizeTimeLeft = MEMORIZE_SECONDS; playTimeLeft = PLAY_SECONDS;
+      createBoard();
+      isMemorizePhase = true;
+      boardEl.style.pointerEvents = 'none';
+      updateScore();
+      updateLiveCard();
+      startMemorizePhase();
+    }
+
+    function createBoard(){
+      const doubled = [...FRONT_IMAGES, ...FRONT_IMAGES];
+      shuffle(doubled);
+      boardEl.innerHTML = "";
+      doubled.forEach(src => {
+        const card = document.createElement("div");
+        card.className = "card flip";
+        card.innerHTML = `
+          <img class="front" src="${src}" alt=""/>
+          <img class="back" src="${BACK_IMAGE}" alt=""/>
+        `;
+        card.addEventListener("click", handleCard);
+        boardEl.appendChild(card);
+      });
+      updateScore();
+    }
+
+    // Memorize phase
+    function startMemorizePhase(){
+      memorizeTimeLeft = MEMORIZE_SECONDS;
+      memorizeCd.textContent = `Memorize: ${memorizeTimeLeft}s`;
+      playCd.textContent = "";
+      updateLiveCard();
+      memorizeTimer = setInterval(() => {
+        memorizeTimeLeft--;
+        memorizeCd.textContent = `Memorize: ${memorizeTimeLeft}s`;
+        updateLiveCard();
+        if (memorizeTimeLeft <= 0) {
+          clearInterval(memorizeTimer);
+          flipAllToBack();
+          isMemorizePhase = false;
+          boardEl.style.pointerEvents = 'all';
+          startPlayPhase();
+        }
+      }, 1000);
+    }
+    function flipAllToBack(){ document.querySelectorAll(".card").forEach(c => c.classList.remove("flip")); }
+
+    // Play phase
+    function startPlayPhase(){
+      playTimeLeft = PLAY_SECONDS;
+      playCd.textContent = `Time: ${playTimeLeft}s`;
+      updateLiveCard();
+      playTimer = setInterval(() => {
+        playTimeLeft--;
+        playCd.textContent = `Time: ${playTimeLeft}s`;
+        updateLiveCard();
+        if (playTimeLeft <= 0) {
+          clearInterval(playTimer);
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // Card click
+    function handleCard(e){
+      if (isMemorizePhase) return;
+      const card = e.currentTarget;
+      if (lockBoard || card === firstCard || card.classList.contains("matched")) return;
+      card.classList.add("flip");
+      if (!firstCard){ firstCard = card; return; }
+
+      if (frontSrc(card) === frontSrc(firstCard)){
+        card.classList.add("matched");
+        firstCard.classList.add("matched");
+        firstCard = null; matchedPairs++; updateScore(); updateLiveCard();
+        if (matchedPairs === FRONT_IMAGES.length) endGame();
+      }else{
+        lockBoard = true;
+        setTimeout(() => {
+          card.classList.remove("flip");
+          firstCard.classList.remove("flip");
+          firstCard = null; lockBoard = false;
+        }, 750);
+      }
+    }
+
+    // End game
+    function endGame(){
+      clearInterval(playTimer);
+      boardEl.style.pointerEvents = "none";
+      memorizeCd.textContent = ""; playCd.textContent = "";
+      const msg = `@${xname} — Score: ${matchedPairs}/${FRONT_IMAGES.length} • Time left: ${playTimeLeft}s`;
+      resultMsg.textContent = msg;
+      updateShareCardFields(); // ensure last values
+      resultCard.style.display = "flex";
+
+      // Prepare Share link
+      const tweetText = encodeURIComponent(
+        `I just played Sentient Memory Match! My score: ${matchedPairs}/${FRONT_IMAGES.length}`
+      );
+      const tweetUrl = encodeURIComponent(window.location.href);
+      shareBtn.href = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
+    }
+
+    // ===== Live & Share Card Helpers =====
+    function updateScore(){
+      scoreDisplay.textContent = `Matches: ${matchedPairs}/${FRONT_IMAGES.length}`;
+    }
+
+    function currentTimeLeft(){
+      return isMemorizePhase ? memorizeTimeLeft : playTimeLeft;
+    }
+
+    function updateLiveCard(){
+      liveStats.textContent = `Matches: ${matchedPairs}/${FRONT_IMAGES.length} • Time: ${currentTimeLeft()}s`;
+      updateShareCardFields();
+    }
+
+    function updateShareCardFields(){
+      scUsername.textContent = "@" + xname;
+      scScore.textContent = `Score: ${matchedPairs}/${FRONT_IMAGES.length}`;
+      scTime.textContent = `Time left: ${currentTimeLeft()}s`;
+      // keep avatars in sync
+      if (avatarUrl) setAllAvatars(avatarUrl);
+    }
+
+    // Download current score card (works anytime)
+    async function downloadCurrentScore(filename = "sentient-score.png"){
+      updateShareCardFields();
+      const canvas = await html2canvas(shareCard, {useCORS:true, backgroundColor:null});
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    downloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
+    liveDownloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
+
+    // Utilities
+    const frontSrc = card => card.querySelector('.front').src;
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+  </script>
+</body>
+</html>
