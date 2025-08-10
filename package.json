@@ -1,7 +1,0 @@
-{
-  "name": "sentient-memory-match",
-  "private": true,
-  "dependencies": {
-    "@vercel/kv": "^3.0.0"
-  }
-}
