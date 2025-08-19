@@ -1,44 +1,48 @@
-export const config = { runtime: 'edge' };
+// Node.js Serverless Function
+module.exports.config = { runtime: 'nodejs' };
 
-const API_URL =
-  process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const API_TOKEN =
-  process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const Redis = require('ioredis');
 
-async function redisPipeline(cmds) {
-  const r = await fetch(`${API_URL}/pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${API_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(cmds)
-  });
-  if (!r.ok) throw new Error(`KV error: ${r.status}`);
-  return r.json();
+let client;
+function getRedis() {
+  if (client) return client;
+  const url = process.env.REDIS_URL;
+  if (!url) throw new Error('REDIS_URL is not set');
+
+  let opts = {};
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'rediss:') opts.tls = {}; // TLS
+  } catch (_) {}
+  client = new Redis(url, opts);
+  return client;
 }
 
-export default async function handler(req) {
+module.exports = async (req, res) => {
   if (req.method !== 'GET') {
-    return new Response('Method Not Allowed', { status: 405 });
+    res.statusCode = 405; res.end('Method Not Allowed'); return;
   }
 
   try {
-    // En iyi ilk 50
-    const r1 = await redisPipeline([['ZREVRANGE', 'smm:board', '0', '49']]);
-    const handles = r1?.[0]?.result || [];
+    const r = getRedis();
 
-    if (!handles.length) {
-      return new Response(JSON.stringify({ items: [] }), {
-        status: 200, headers: { 'content-type': 'application/json' }
-      });
+    // En iyi 50 (yüksekten düşüğe)
+    const handles = await r.zrevrange('smm:board', 0, 49);
+
+    if (!handles?.length) {
+      res.statusCode = 200; res.setHeader('content-type','application/json');
+      res.end(JSON.stringify({ items: [] })); return;
     }
 
-    const cmds = handles.map(h => ['HMGET', `smm:detail:${h}`, 'matched', 'timeMs', 'updatedAt']);
-    const r2 = await redisPipeline(cmds);
+    // Pipeline ile detayları çek
+    const pipe = r.pipeline();
+    for (const h of handles) {
+      pipe.hmget(`smm:detail:${h}`, 'matched', 'timeMs', 'updatedAt');
+    }
+    const results = await pipe.exec();
 
     const items = handles.map((h, i) => {
-      const arr = r2[i]?.result || [];
+      const arr = results[i]?.[1] || [];
       return {
         handle: h,
         matched: parseInt(arr?.[0] ?? '0', 10),
@@ -47,10 +51,10 @@ export default async function handler(req) {
       };
     });
 
-    return new Response(JSON.stringify({ items }), {
-      status: 200, headers: { 'content-type': 'application/json' }
-    });
+    res.statusCode = 200; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ items }));
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    res.statusCode = 500; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ error: String(e) }));
   }
-}
+};
