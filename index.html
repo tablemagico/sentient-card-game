@@ -9,8 +9,8 @@
     :root{
       --amber:#D8772B; --amber-700:#7A2A14; --teal:#1E6A6B;
       --ink:#0A0B0D; --ink-2:#0E1114;
-      --gap:10px;               /* kart aralığı */
-      --board-max: 520px;       /* masaüstünde azami genişlik */
+      --gap:10px;
+      --board-max: 520px;
       --ring: 0 0 0 3px rgba(216,119,43,.28);
     }
 
@@ -18,14 +18,13 @@
 
     body{
       display:flex; flex-direction:column; align-items:center; gap:1rem;
-      min-height:100vh; padding:1rem; padding-bottom:130px; /* canlı score kartı için alan */
+      min-height:100vh; padding:1rem; padding-bottom:130px;
       color:#EDEFF2; background-color:var(--ink);
       background:
         url('images/bg.png') center/cover no-repeat fixed,
         radial-gradient(55% 40% at 50% 105%, rgba(216,119,43,.22), transparent 70%),
         linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%);
     }
-
     body::before{
       content:""; position:fixed; inset:0; pointer-events:none; opacity:.18;
       background-image:
@@ -55,7 +54,7 @@
     /* INFO */
     #game-info{ display:flex; gap:1rem; font-size:1.05rem; color:#dbe3ea; flex-wrap:wrap; justify-content:center; }
 
-    /* BOARD: responsive ızgara */
+    /* BOARD */
     #board{
       width:min(95vw, var(--board-max));
       display:grid;
@@ -64,16 +63,11 @@
       margin-top:.5rem;
     }
 
-    /* Kart: her zaman kare */
     .card{
-      position:relative;
-      width:100%;
-      aspect-ratio:1/1;             /* kare tut */
-      perspective:600px; cursor:pointer;
+      position:relative; width:100%; aspect-ratio:1/1; perspective:600px; cursor:pointer;
     }
     .card img{
-      position:absolute; inset:0;
-      width:100%; height:100%; border-radius:12px;
+      position:absolute; inset:0; width:100%; height:100%; border-radius:12px;
       backface-visibility:hidden; transition: transform .45s;
       border:2px solid rgba(30,106,107,.28);
       box-shadow:0 0 10px rgba(30,106,107,.16);
@@ -88,16 +82,15 @@
 
     /* RESULT */
     #result{
-      display:none; flex-direction:column; align-items:center; gap:.75rem;
+      display:none; flex-direction:column; align-items:center; gap:.55rem;
       padding:1.2rem 1.4rem; border:2px solid var(--amber); border-radius:16px;
       box-shadow:0 0 16px rgba(216,119,43,.45), 0 0 24px rgba(30,106,107,.32) inset;
       background:linear-gradient(180deg, rgba(15,19,22,.92), rgba(10,11,13,.92));
-      color:#eef3f7; z-index:10;
-      max-width:min(92vw, 520px);
+      color:#eef3f7; z-index:10; max-width:min(92vw, 520px);
     }
+    #result-rank{ font-weight:800; color:var(--amber); }
 
     #buttons{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; }
-
     button, a.button{
       border:none; color:#0c0e0f; font-weight:800; cursor:pointer; text-decoration:none; letter-spacing:.2px;
       padding:.65rem 1.1rem; border-radius:12px;
@@ -112,14 +105,15 @@
     /* HIDDEN SHARE CARD */
     #share-wrapper{ position:absolute; left:-10000px; top:-10000px; }
     .share-card{
-      width:420px; height:240px; border-radius:16px;
+      width:420px; height:260px; border-radius:16px;
       background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
-      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.4rem;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem;
       color:#fff; border:4px solid var(--amber); box-shadow:0 0 16px rgba(30,106,107,.5); overflow:hidden;
     }
     .share-avatar{ width:56px; height:56px; border-radius:50%; border:3px solid var(--amber); object-fit:cover; }
-    .share-card h2{ margin-bottom:.1rem; font-size:1.5rem; color:var(--amber); }
+    .share-card h2{ margin-bottom:.1rem; font-size:1.4rem; color:var(--amber); }
     .share-card p{ font-size:1rem; color:#f3e9e2; }
+    .share-rank{ font-weight:800; color:var(--amber); }
 
     /* PLAYER BADGE */
     #player-badge{
@@ -137,8 +131,7 @@
     #live-card-container{
       position:fixed; left:0; right:0;
       bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-      display:none; z-index:25;
-      display:flex; justify-content:center; pointer-events:none;
+      z-index:25; display:flex; justify-content:center; pointer-events:none;
     }
     #live-card{
       pointer-events:auto;
@@ -161,7 +154,7 @@
     }
     #credits a{ color:var(--amber); text-decoration:underline; }
 
-    /* ------- LEADERBOARD ------- */
+    /* ------- LEADERBOARD (sürekli açık) ------- */
     #leaderboard{
       position:fixed; top:6rem; right:1rem; z-index:40;
       width:min(320px, 90vw); max-height:70vh; overflow:auto;
@@ -169,17 +162,19 @@
       background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
       border:2px solid var(--amber);
       box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
-      display:none;
+      display:block; /* her zaman görünür */
     }
-    #lb-title{ font-weight:800; color:var(--amber); margin-bottom:.4rem; }
+    #lb-title{ font-weight:800; color:var(--amber); margin-bottom:.4rem; display:flex; justify-content:space-between; align-items:center; }
+    #lb-meta{ font-size:.85rem; opacity:.8; color:#dbe3ea; }
     #lb-list{ list-style:none; display:flex; flex-direction:column; gap:.35rem; }
     .lb-item{ display:flex; align-items:center; gap:.6rem; }
-    .lb-rank{ width:1.6rem; text-align:right; font-weight:800; color:var(--amber); }
+    .lb-rank{ width:2.2rem; text-align:right; font-weight:800; color:var(--amber); }
     .lb-avatar{ width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(216,119,43,.6); }
     .lb-handle{ font-weight:700; color:#e7edf3; }
     .lb-stats{ margin-left:auto; opacity:.9; font-size:.95rem; }
+    #lb-loading{ text-align:center; padding:.5rem 0; opacity:.7; display:none; }
 
-    /* ------- MOBIL UYUMLAŞTIRMALAR ------- */
+    /* MOBIL */
     @media (max-width: 480px){
       :root{ --gap:8px; }
       h1{ font-size:1.6rem; }
@@ -217,6 +212,7 @@
   <div id="result">
     <h2>Congratulations!</h2>
     <p id="result-message"></p>
+    <p id="result-rank"></p>
     <div id="buttons">
       <a id="download-btn" class="button" href="#">Download Your Score Card</a>
       <a id="share-btn" class="button" target="_blank" href="#">Share on X</a>
@@ -224,10 +220,14 @@
     </div>
   </div>
 
-  <!-- LEADERBOARD -->
+  <!-- LEADERBOARD (always visible) -->
   <aside id="leaderboard">
-    <div id="lb-title">🏆 Leaderboard</div>
+    <div id="lb-title">
+      <span>🏆 Leaderboard</span>
+      <span id="lb-meta"></span>
+    </div>
     <ol id="lb-list"></ol>
+    <div id="lb-loading">Loading…</div>
   </aside>
 
   <!-- INTRO OVERLAY -->
@@ -267,6 +267,7 @@
       <p id="sc-username">@player</p>
       <p id="sc-score">Score: 0/8</p>
       <p id="sc-time">Time left: 0s</p>
+      <p id="sc-rank" class="share-rank">Rank: #–</p>
     </div>
   </div>
 
@@ -291,6 +292,7 @@
           scoreDisplay = document.getElementById("score-display"),
           resultCard = document.getElementById("result"),
           resultMsg = document.getElementById("result-message"),
+          resultRank = document.getElementById("result-rank"),
           downloadBtn = document.getElementById("download-btn"),
           shareBtn = document.getElementById("share-btn"),
           restartBtn = document.getElementById("restart-btn"),
@@ -309,14 +311,22 @@
           scAvatar = document.getElementById("sc-avatar"),
           scUsername = document.getElementById("sc-username"),
           scScore = document.getElementById("sc-score"),
-          scTime = document.getElementById("sc-time");
+          scTime = document.getElementById("sc-time"),
+          scRank = document.getElementById("sc-rank"),
+          lb = document.getElementById('leaderboard'),
+          lbList = document.getElementById('lb-list'),
+          lbMeta = document.getElementById('lb-meta'),
+          lbLoading = document.getElementById('lb-loading');
 
     // STATE
     let firstCard = null, lockBoard = false, matchedPairs = 0,
         playTimer, playTimeLeft = PLAY_SECONDS, xname = "player",
         isMemorizePhase = false, memorizeTimer, memorizeTimeLeft = MEMORIZE_SECONDS,
         avatarUrl = "";
-    let playStartMs = 0; // <— süre ölçümü için
+    let playStartMs = 0; // süre ölçümü
+    // Leaderboard state (sonsuz kaydırma)
+    let lbOffset = 0, lbPage = 50, lbTotal = null, lbIsLoading = false;
+    let myRank = null;
 
     const sanitizeHandle = (v) => v.replace(/\s+/g,"").replace(/^@/,"");
     const resolveAvatar = (handle) => `https://unavatar.io/x/${encodeURIComponent(handle)}`;
@@ -327,8 +337,68 @@
       profileAvatar.onerror = onerr; liveAvatar.onerror = onerr; scAvatar.onerror = onerr;
     }
 
+    // ------ Leaderboard fetchers ------
+    async function fetchLeaderboardPage(start=0, count=50, rankFor=null){
+      const url = new URL('/api/leaderboard', window.location.origin);
+      url.searchParams.set('start', String(start));
+      url.searchParams.set('count', String(count));
+      if (rankFor) url.searchParams.set('rankFor', rankFor);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('leaderboard failed');
+      return res.json(); // {items,start,count,total,rank?}
+    }
+
+    function formatMs(ms){ return (ms/1000).toFixed(2) + "s"; }
+    function avatarFor(handle){ return `https://unavatar.io/x/${encodeURIComponent(handle)}`; }
+
+    function renderLeaderboardItems(items, startIndex){
+      items.forEach((it, idx) => {
+        const rank = startIndex + idx + 1;
+        const li = document.createElement('li');
+        li.className = 'lb-item';
+        const av = avatarFor(it.handle);
+        li.innerHTML = `
+          <span class="lb-rank">#${rank}</span>
+          <img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/>
+          <span class="lb-handle">@${it.handle}</span>
+          <span class="lb-stats">${it.matched}/8 • ${formatMs(it.timeMs)}</span>
+        `;
+        lbList.appendChild(li);
+      });
+    }
+
+    async function resetAndLoadLeaderboard(rankFor=null){
+      lbList.innerHTML = '';
+      lbOffset = 0; lbTotal = null; myRank = null;
+      await loadMoreLeaderboard(rankFor); // ilk sayfa
+    }
+
+    async function loadMoreLeaderboard(rankFor=null){
+      if (lbIsLoading) return;
+      lbIsLoading = true; lbLoading.style.display = 'block';
+      try{
+        const data = await fetchLeaderboardPage(lbOffset, lbPage, rankFor);
+        if (lbTotal == null) lbTotal = data.total ?? 0;
+        // rank varsa kaydet
+        if (typeof data.rank === 'number') myRank = data.rank;
+        renderLeaderboardItems(data.items || [], lbOffset);
+        lbOffset += (data.items || []).length;
+        lbMeta.textContent = lbTotal ? `${lbOffset}/${lbTotal}` : '';
+      }finally{
+        lbIsLoading = false; lbLoading.style.display = 'none';
+      }
+    }
+
+    // Scroll ile daha fazla yükle
+    lb.addEventListener('scroll', async () => {
+      const nearBottom = lb.scrollTop + lb.clientHeight >= lb.scrollHeight - 80;
+      if (nearBottom && (lbTotal == null || lbOffset < lbTotal)) {
+        await loadMoreLeaderboard(); // devamında rankFor göndermemize gerek yok
+      }
+    });
+
     // START
-    startBtn.addEventListener("click", () => {
+    startBtn.addEventListener("click", async () => {
       const val = sanitizeHandle(xnameInput.value || "");
       if (!val) { alert("Lütfen X kullanıcı adınızı girin (örn. @sizinadiniz)."); return; }
       xname = val; avatarUrl = resolveAvatar(xname); setAllAvatars(avatarUrl);
@@ -338,11 +408,13 @@
       liveContainer.style.display = "flex";
       intro.style.display = "none";
       initGame();
+
+      // Kullanıcı girer girmez leaderboard’u sıfırdan yükle (rank dahil)
+      try { await resetAndLoadLeaderboard(xname); } catch(e){ console.error(e); }
     });
 
     restartBtn.addEventListener("click", () => {
       resultCard.style.display = "none";
-      document.getElementById('leaderboard').style.display = 'none';
       boardEl.style.pointerEvents = "all";
       initGame();
     });
@@ -395,7 +467,7 @@
 
     // Play phase
     function startPlayPhase(){
-      playStartMs = Date.now(); // <— ölçüm başlangıcı
+      playStartMs = Date.now();
       playTimeLeft = PLAY_SECONDS;
       playCd.textContent = `Time: ${playTimeLeft}s`; updateLiveCard();
       playTimer = setInterval(() => {
@@ -441,17 +513,22 @@
       const tweetUrl = encodeURIComponent(window.location.href);
       shareBtn.href = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
 
-      // ---- SCORE SUBMIT + LEADERBOARD ----
+      // ---- SCORE SUBMIT + RANK + LEADERBOARD REFRESH ----
       try {
-        const elapsed = Math.max(0, Date.now() - playStartMs); // 20sn oyun süresi içinde geçen gerçek ms
+        const elapsed = Math.max(0, Date.now() - playStartMs);
         await submitScore(xname, matchedPairs, elapsed);
-      } catch(e){ console.error('submitScore error', e); }
 
-      try {
-        const items = await fetchLeaderboard();
-        renderLeaderboard(items);
-        document.getElementById('leaderboard').style.display = 'block';
-      } catch(e){ console.error('leaderboard error', e); }
+        // Rank'i ve ilk sayfayı yenile
+        await resetAndLoadLeaderboard(xname);
+        if (typeof myRank === 'number') {
+          resultRank.textContent = `Your Rank: #${myRank}`;
+        } else {
+          resultRank.textContent = '';
+        }
+        // Share card'a da rank yaz
+        updateShareCardFields();
+
+      } catch(e){ console.error('submit/leaderboard error', e); }
     }
 
     // Live & Share helpers
@@ -465,6 +542,7 @@
       scUsername.textContent = "@" + xname;
       scScore.textContent = `Score: ${matchedPairs}/${FRONT_IMAGES.length}`;
       scTime.textContent = `Time left: ${currentTimeLeft()}s`;
+      scRank.textContent = `Rank: ${typeof myRank === 'number' ? '#' + myRank : '#–'}`;
       if (avatarUrl) setAllAvatars(avatarUrl);
     }
 
@@ -478,14 +556,6 @@
     downloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
     liveDownloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
 
-    // ---- Leaderboard yardımcıları ----
-    function formatMs(ms){
-      return (ms/1000).toFixed(2) + "s"; // saniye+salise
-    }
-    function avatarFor(handle){
-      return `https://unavatar.io/x/${encodeURIComponent(handle)}`;
-    }
-
     async function submitScore(handle, matched, timeMs){
       const res = await fetch('/api/submit-score', {
         method:'POST',
@@ -496,33 +566,12 @@
       return res.json();
     }
 
-    async function fetchLeaderboard(){
-      const res = await fetch('/api/leaderboard');
-      if (!res.ok) throw new Error('leaderboard failed');
-      const data = await res.json();
-      return data.items || [];
-    }
-
-    function renderLeaderboard(items){
-      const list = document.getElementById('lb-list');
-      list.innerHTML = '';
-      items.forEach((it, idx) => {
-        const li = document.createElement('li');
-        li.className = 'lb-item';
-        const av = avatarFor(it.handle);
-        li.innerHTML = `
-          <span class="lb-rank">${idx+1}.</span>
-          <img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/>
-          <span class="lb-handle">@${it.handle}</span>
-          <span class="lb-stats">${it.matched}/8 • ${formatMs(it.timeMs)}</span>
-        `;
-        list.appendChild(li);
-      });
-    }
-
     // Utils
     const frontSrc = card => card.querySelector('.front').src;
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+
+    // Sayfa açılışında (kullanıcı adı girmemiş olsa da) leaderboard'ı yükle
+    resetAndLoadLeaderboard().catch(console.error);
   </script>
 </body>
 </html>
