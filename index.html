@@ -161,28 +161,43 @@
     }
     #credits a{ color:var(--amber); text-decoration:underline; }
 
+    /* ------- LEADERBOARD ------- */
+    #leaderboard{
+      position:fixed; top:6rem; right:1rem; z-index:40;
+      width:min(320px, 90vw); max-height:70vh; overflow:auto;
+      padding:0.9rem 1rem; border-radius:16px;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      border:2px solid var(--amber);
+      box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
+      display:none;
+    }
+    #lb-title{ font-weight:800; color:var(--amber); margin-bottom:.4rem; }
+    #lb-list{ list-style:none; display:flex; flex-direction:column; gap:.35rem; }
+    .lb-item{ display:flex; align-items:center; gap:.6rem; }
+    .lb-rank{ width:1.6rem; text-align:right; font-weight:800; color:var(--amber); }
+    .lb-avatar{ width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(216,119,43,.6); }
+    .lb-handle{ font-weight:700; color:#e7edf3; }
+    .lb-stats{ margin-left:auto; opacity:.9; font-size:.95rem; }
+
     /* ------- MOBIL UYUMLAŞTIRMALAR ------- */
     @media (max-width: 480px){
       :root{ --gap:8px; }
       h1{ font-size:1.6rem; }
       #board{ width:94vw; }
-      /* rozet sola taşınsın */
       #player-badge{ right:auto; left:.6rem; top:.6rem; }
-      /* bilgi yazıları küçülsün */
       #game-info{ font-size:.95rem; }
       #result{ padding:1rem 1.1rem; }
+      #leaderboard{ right:.6rem; left:.6rem; top:auto; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
     }
-    /* çok dar ekran: 3 sütun */
     @media (max-width: 360px){
       #board{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
       #live-card img{ width:40px; height:40px; }
       #live-stats{ font-size:.9rem; }
     }
-    /* yatay ama kısa ekranlar için: alttaki kartı iyice sıkıştır */
     @media (orientation: landscape) and (max-height: 420px){
       body{ padding-bottom:100px; }
       #live-card{ width:min(420px, 94vw); padding:.6rem .8rem; }
-      #credits{ display:none; } /* yer kazancı */
+      #credits{ display:none; }
     }
   </style>
 </head>
@@ -208,6 +223,12 @@
       <button id="restart-btn" class="button">Restart</button>
     </div>
   </div>
+
+  <!-- LEADERBOARD -->
+  <aside id="leaderboard">
+    <div id="lb-title">🏆 Leaderboard</div>
+    <ol id="lb-list"></ol>
+  </aside>
 
   <!-- INTRO OVERLAY -->
   <div id="intro">
@@ -295,6 +316,7 @@
         playTimer, playTimeLeft = PLAY_SECONDS, xname = "player",
         isMemorizePhase = false, memorizeTimer, memorizeTimeLeft = MEMORIZE_SECONDS,
         avatarUrl = "";
+    let playStartMs = 0; // <— süre ölçümü için
 
     const sanitizeHandle = (v) => v.replace(/\s+/g,"").replace(/^@/,"");
     const resolveAvatar = (handle) => `https://unavatar.io/x/${encodeURIComponent(handle)}`;
@@ -320,6 +342,7 @@
 
     restartBtn.addEventListener("click", () => {
       resultCard.style.display = "none";
+      document.getElementById('leaderboard').style.display = 'none';
       boardEl.style.pointerEvents = "all";
       initGame();
     });
@@ -334,7 +357,6 @@
       boardEl.style.pointerEvents = 'none';
       updateScore(); updateLiveCard();
       startMemorizePhase();
-      // sayfanın en üstüne, tahtayı görünür tut
       requestAnimationFrame(() => window.scrollTo({top:0, behavior:"smooth"}));
     }
 
@@ -373,6 +395,7 @@
 
     // Play phase
     function startPlayPhase(){
+      playStartMs = Date.now(); // <— ölçüm başlangıcı
       playTimeLeft = PLAY_SECONDS;
       playCd.textContent = `Time: ${playTimeLeft}s`; updateLiveCard();
       playTimer = setInterval(() => {
@@ -405,7 +428,7 @@
     }
 
     // End game
-    function endGame(){
+    async function endGame(){
       clearInterval(playTimer);
       boardEl.style.pointerEvents = "none";
       memorizeCd.textContent = ""; playCd.textContent = "";
@@ -417,6 +440,18 @@
       const tweetText = encodeURIComponent(`I just played Sentient Memory Match! My score: ${matchedPairs}/${FRONT_IMAGES.length}`);
       const tweetUrl = encodeURIComponent(window.location.href);
       shareBtn.href = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
+
+      // ---- SCORE SUBMIT + LEADERBOARD ----
+      try {
+        const elapsed = Math.max(0, Date.now() - playStartMs); // 20sn oyun süresi içinde geçen gerçek ms
+        await submitScore(xname, matchedPairs, elapsed);
+      } catch(e){ console.error('submitScore error', e); }
+
+      try {
+        const items = await fetchLeaderboard();
+        renderLeaderboard(items);
+        document.getElementById('leaderboard').style.display = 'block';
+      } catch(e){ console.error('leaderboard error', e); }
     }
 
     // Live & Share helpers
@@ -442,6 +477,48 @@
     }
     downloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
     liveDownloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
+
+    // ---- Leaderboard yardımcıları ----
+    function formatMs(ms){
+      return (ms/1000).toFixed(2) + "s"; // saniye+salise
+    }
+    function avatarFor(handle){
+      return `https://unavatar.io/x/${encodeURIComponent(handle)}`;
+    }
+
+    async function submitScore(handle, matched, timeMs){
+      const res = await fetch('/api/submit-score', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ handle, matched, timeMs })
+      });
+      if (!res.ok) throw new Error('submit failed');
+      return res.json();
+    }
+
+    async function fetchLeaderboard(){
+      const res = await fetch('/api/leaderboard');
+      if (!res.ok) throw new Error('leaderboard failed');
+      const data = await res.json();
+      return data.items || [];
+    }
+
+    function renderLeaderboard(items){
+      const list = document.getElementById('lb-list');
+      list.innerHTML = '';
+      items.forEach((it, idx) => {
+        const li = document.createElement('li');
+        li.className = 'lb-item';
+        const av = avatarFor(it.handle);
+        li.innerHTML = `
+          <span class="lb-rank">${idx+1}.</span>
+          <img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/>
+          <span class="lb-handle">@${it.handle}</span>
+          <span class="lb-stats">${it.matched}/8 • ${formatMs(it.timeMs)}</span>
+        `;
+        list.appendChild(li);
+      });
+    }
 
     // Utils
     const frontSrc = card => card.querySelector('.front').src;
