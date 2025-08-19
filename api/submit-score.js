@@ -1,60 +1,81 @@
-export const config = { runtime: 'edge' };
+// Node.js Serverless Function
+module.exports.config = { runtime: 'nodejs' };
 
-// Hem Vercel KV hem Upstash Redis için isim uyumluluğu:
-const API_URL =
-  process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const API_TOKEN =
-  process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const Redis = require('ioredis');
 
-async function redisPipeline(cmds) {
-  const r = await fetch(`${API_URL}/pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${API_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(cmds)
-  });
-  if (!r.ok) throw new Error(`KV error: ${r.status}`);
-  return r.json();
+let client;
+function getRedis() {
+  if (client) return client;
+  const url = process.env.REDIS_URL;
+  if (!url) throw new Error('REDIS_URL is not set');
+
+  // URL 'rediss://' ise TLS aç, 'redis://' ise düz bağlantı
+  let opts = {};
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'rediss:') opts.tls = {}; // TLS
+  } catch (_) {}
+  client = new Redis(url, opts);
+  return client;
 }
 
-export default async function handler(req) {
+// Skor: önce matched (büyük olan ↑), eşitse daha hızlı (time küçük olan ↑)
+const composite = (matched, timeMs) => matched * 1_000_000_000 - timeMs;
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    req.on('end', () => {
+      try { resolve(data ? JSON.parse(data) : {}); }
+      catch (e) { reject(e); }
+    });
+    req.on('error', reject);
+  });
+}
+
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
+    res.statusCode = 405; res.end('Method Not Allowed'); return;
   }
 
   try {
-    const { handle, matched, timeMs } = await req.json();
+    const body = await readJson(req);
+    const { handle, matched, timeMs } = body;
 
     if (!handle || typeof matched !== 'number' || typeof timeMs !== 'number') {
-      return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
+      res.statusCode = 400; res.setHeader('content-type','application/json');
+      res.end(JSON.stringify({ error: 'Invalid payload' })); return;
     }
 
-    const h = handle.toLowerCase().replace(/^@/, '').trim();
+    const h = String(handle).toLowerCase().replace(/^@/, '').trim();
     const m = Math.max(0, Math.min(8, Math.floor(matched)));
-    const t = Math.max(0, Math.min(3_600_000, Math.floor(timeMs))); // güvenli sınır (<= 1 saat)
-    const composite = m * 1_000_000_000 - t; // önce eşleşme, eşitse daha hızlı ↑
+    const t = Math.max(0, Math.min(3_600_000, Math.floor(timeMs))); // <=1 saat güvenlik
 
-    // Mevcut skor?
-    const zres = await redisPipeline([['ZSCORE', 'smm:board', h]]);
-    const current = zres?.[0]?.result;
-    const currentNum = current == null ? null : Number(current);
+    const r = getRedis();
+
+    // mevcut skor?
+    const cur = await r.zscore('smm:board', h);
+    const curNum = cur == null ? null : Number(cur);
+    const nextScore = composite(m, t);
 
     let updated = false;
-    if (currentNum == null || composite > currentNum) {
-      await redisPipeline([
-        ['ZADD', 'smm:board', composite.toString(), h],
-        ['HSET', `smm:detail:${h}`, 'matched', m.toString(), 'timeMs', t.toString(), 'updatedAt', Date.now().toString()]
-      ]);
+    if (curNum == null || nextScore > curNum) {
+      const multi = r.multi();
+      multi.zadd('smm:board', nextScore, h);
+      multi.hset(`smm:detail:${h}`,
+        'matched', String(m),
+        'timeMs', String(t),
+        'updatedAt', String(Date.now())
+      );
+      await multi.exec();
       updated = true;
     }
 
-    return new Response(JSON.stringify({ updated }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    });
+    res.statusCode = 200; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ updated }));
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    res.statusCode = 500; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ error: String(e) }));
   }
-}
+};
