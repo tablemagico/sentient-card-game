@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <title>Sentient Memory Match</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     :root{
-      --amber:#D8772B; --amber-700:#7A2A14; --teal:#1E6A6B;
-      --ink:#0A0B0D; --ink-2:#0E1114;
+      --amber:#D8772B; --teal:#1E6A6B;
+      --ink:#0A0B0D;
       --gap:10px;
-      --board-max: 520px;
-      --ring: 0 0 0 3px rgba(216,119,43,.28);
+      --board-max:520px;
+      --ring:0 0 0 3px rgba(216,119,43,.28);
+      --vh:1vh; /* iOS fix */
     }
 
     *{ box-sizing:border-box; margin:0; padding:0; font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
 
     body{
       display:flex; flex-direction:column; align-items:center; gap:1rem;
-      min-height:100vh; padding:1rem; padding-bottom:130px;
+      min-height:calc(var(--vh) * 100); padding:1rem; padding-bottom:130px;
       color:#EDEFF2; background-color:var(--ink);
       background:
         url('images/bg.png') center/cover no-repeat fixed,
@@ -59,18 +60,14 @@
       width:min(95vw, var(--board-max));
       display:grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap:var(--gap);
-      margin-top:.5rem;
+      gap:var(--gap); margin-top:.5rem;
     }
 
-    .card{
-      position:relative; width:100%; aspect-ratio:1/1; perspective:600px; cursor:pointer;
-    }
+    .card{ position:relative; width:100%; aspect-ratio:1/1; perspective:600px; cursor:pointer; }
     .card img{
       position:absolute; inset:0; width:100%; height:100%; border-radius:12px;
       backface-visibility:hidden; transition: transform .45s;
-      border:2px solid rgba(30,106,107,.28);
-      box-shadow:0 0 10px rgba(30,106,107,.16);
+      border:2px solid rgba(30,106,107,.28); box-shadow:0 0 10px rgba(30,106,107,.16);
       object-fit:cover;
     }
     .card .front{ transform: rotateY(180deg); }
@@ -96,6 +93,7 @@
       padding:.65rem 1.1rem; border-radius:12px;
       background:linear-gradient(90deg, var(--amber), var(--teal));
       box-shadow:0 6px 18px rgba(216,119,43,.35), 0 0 0 1px rgba(30,106,107,.25) inset;
+      touch-action: manipulation;
     }
     .button-sm{ padding:.45rem .8rem; font-weight:700; font-size:.9rem; }
     button[disabled]{ opacity:.6; cursor:not-allowed; }
@@ -154,7 +152,7 @@
     }
     #credits a{ color:var(--amber); text-decoration:underline; }
 
-    /* ------- LEADERBOARD (sürekli açık) ------- */
+    /* ------- LEADERBOARD (always visible) ------- */
     #leaderboard{
       position:fixed; top:6rem; right:1rem; z-index:40;
       width:min(320px, 90vw); max-height:70vh; overflow:auto;
@@ -162,7 +160,7 @@
       background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
       border:2px solid var(--amber);
       box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
-      display:block; /* her zaman görünür */
+      display:block;
     }
     #lb-title{ font-weight:800; color:var(--amber); margin-bottom:.4rem; display:flex; justify-content:space-between; align-items:center; }
     #lb-meta{ font-size:.85rem; opacity:.8; color:#dbe3ea; }
@@ -174,6 +172,14 @@
     .lb-stats{ margin-left:auto; opacity:.9; font-size:.95rem; }
     #lb-loading{ text-align:center; padding:.5rem 0; opacity:.7; display:none; }
 
+    /* Mobil LB toggle */
+    #lb-toggle{
+      position:fixed; z-index:41;
+      right:.6rem; bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+      display:none;
+    }
+    .hidden{ display:none !important; }
+
     /* MOBIL */
     @media (max-width: 480px){
       :root{ --gap:8px; }
@@ -182,7 +188,8 @@
       #player-badge{ right:auto; left:.6rem; top:.6rem; }
       #game-info{ font-size:.95rem; }
       #result{ padding:1rem 1.1rem; }
-      #leaderboard{ right:.6rem; left:.6rem; top:auto; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+      #leaderboard{ right:.6rem; left:.6rem; top:auto; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); max-height:40vh; }
+      #lb-toggle{ display:block; }
     }
     @media (max-width: 360px){
       #board{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -220,7 +227,7 @@
     </div>
   </div>
 
-  <!-- LEADERBOARD (always visible) -->
+  <!-- LEADERBOARD -->
   <aside id="leaderboard">
     <div id="lb-title">
       <span>🏆 Leaderboard</span>
@@ -229,6 +236,7 @@
     <ol id="lb-list"></ol>
     <div id="lb-loading">Loading…</div>
   </aside>
+  <button id="lb-toggle" class="button button-sm" aria-expanded="true">Hide LB</button>
 
   <!-- INTRO OVERLAY -->
   <div id="intro">
@@ -277,6 +285,14 @@
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
+    // === AYARLAR / Mobil açık ===
+    const MOBILE_ENABLED = true;
+    const isMobile = () => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
+
+    // iOS gerçek 100vh düzeltmesi
+    function setVh(){ document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px'); }
+    document.addEventListener('DOMContentLoaded', () => { setVh(); window.addEventListener('resize', setVh, {passive:true}); });
+
     // CONFIG
     const FRONT_IMAGES = [
       "images/img1.png","images/img2.png","images/img3.png","images/img4.png",
@@ -316,7 +332,8 @@
           lb = document.getElementById('leaderboard'),
           lbList = document.getElementById('lb-list'),
           lbMeta = document.getElementById('lb-meta'),
-          lbLoading = document.getElementById('lb-loading');
+          lbLoading = document.getElementById('lb-loading'),
+          lbToggle = document.getElementById('lb-toggle');
 
     // STATE
     let firstCard = null, lockBoard = false, matchedPairs = 0,
@@ -379,7 +396,6 @@
       try{
         const data = await fetchLeaderboardPage(lbOffset, lbPage, rankFor);
         if (lbTotal == null) lbTotal = data.total ?? 0;
-        // rank varsa kaydet
         if (typeof data.rank === 'number') myRank = data.rank;
         renderLeaderboardItems(data.items || [], lbOffset);
         lbOffset += (data.items || []).length;
@@ -393,9 +409,18 @@
     lb.addEventListener('scroll', async () => {
       const nearBottom = lb.scrollTop + lb.clientHeight >= lb.scrollHeight - 80;
       if (nearBottom && (lbTotal == null || lbOffset < lbTotal)) {
-        await loadMoreLeaderboard(); // devamında rankFor göndermemize gerek yok
+        await loadMoreLeaderboard(); // devamında rankFor gerekmiyor
       }
     });
+
+    // Mobilde LB görünürlüğünü aç/kapat (ekran alanı için)
+    if (lbToggle){
+      lbToggle.addEventListener('click', () => {
+        const hidden = lb.classList.toggle('hidden');
+        lbToggle.textContent = hidden ? 'Show LB' : 'Hide LB';
+        lbToggle.setAttribute('aria-expanded', String(!hidden));
+      });
+    }
 
     // START
     startBtn.addEventListener("click", async () => {
@@ -518,13 +543,11 @@
         const elapsed = Math.max(0, Date.now() - playStartMs);
         await submitScore(xname, matchedPairs, elapsed);
 
-        // Rank'i ve ilk sayfayı yenile
+        // Rank ve ilk sayfa
         await resetAndLoadLeaderboard(xname);
-        if (typeof myRank === 'number') {
-          resultRank.textContent = `Your Rank: #${myRank}`;
-        } else {
-          resultRank.textContent = '';
-        }
+        if (typeof myRank === 'number') resultRank.textContent = `Your Rank: #${myRank}`;
+        else resultRank.textContent = '';
+
         // Share card'a da rank yaz
         updateShareCardFields();
 
@@ -570,7 +593,7 @@
     const frontSrc = card => card.querySelector('.front').src;
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
 
-    // Sayfa açılışında (kullanıcı adı girmemiş olsa da) leaderboard'ı yükle
+    // Sayfa açılışında (kullanıcı adı girmese de) leaderboard'ı yükle
     resetAndLoadLeaderboard().catch(console.error);
   </script>
 </body>
