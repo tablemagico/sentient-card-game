@@ -8,13 +8,8 @@ function getRedis() {
   if (client) return client;
   const url = process.env.REDIS_URL;
   if (!url) throw new Error('REDIS_URL is not set');
-
-  // URL 'rediss://' ise TLS aç, 'redis://' ise düz bağlantı
   let opts = {};
-  try {
-    const u = new URL(url);
-    if (u.protocol === 'rediss:') opts.tls = {}; // TLS
-  } catch (_) {}
+  try { const u = new URL(url); if (u.protocol === 'rediss:') opts.tls = {}; } catch (_) {}
   client = new Redis(url, opts);
   return client;
 }
@@ -26,18 +21,13 @@ function readJson(req) {
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (c) => (data += c));
-    req.on('end', () => {
-      try { resolve(data ? JSON.parse(data) : {}); }
-      catch (e) { reject(e); }
-    });
+    req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
     req.on('error', reject);
   });
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.statusCode = 405; res.end('Method Not Allowed'); return;
-  }
+  if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
 
   try {
     const body = await readJson(req);
@@ -53,8 +43,6 @@ module.exports = async (req, res) => {
     const t = Math.max(0, Math.min(3_600_000, Math.floor(timeMs))); // <=1 saat güvenlik
 
     const r = getRedis();
-
-    // mevcut skor?
     const cur = await r.zscore('smm:board', h);
     const curNum = cur == null ? null : Number(cur);
     const nextScore = composite(m, t);
