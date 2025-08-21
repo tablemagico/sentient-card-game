@@ -1,66 +1,69 @@
-export const config = { runtime: "edge" };
+// Node.js Serverless Function
+module.exports.config = { runtime: 'nodejs' };
 
-import { Redis } from "@upstash/redis";
+const Redis = require('ioredis');
 
-const redis = Redis.fromEnv();
-const NS = process.env.LAMUMU_NS || "lamumu:run";
-const RANK_KEY = `${NS}:rank`;
-
-function normalizeHandle(h) {
-  const s = String(h || "guest").trim().replace(/^@/, "").toLowerCase();
-  const safe = s.replace(/[^a-z0-9_.-]/g, "");
-  return safe.slice(0, 32) || "guest";
+let client;
+function getRedis() {
+  if (client) return client;
+  const url = process.env.REDIS_URL;
+  if (!url) throw new Error('REDIS_URL is not set');
+  let opts = {};
+  try { const u = new URL(url); if (u.protocol === 'rediss:') opts.tls = {}; } catch (_) {}
+  client = new Redis(url, opts);
+  return client;
 }
 
-function makeRankScore(score, timeMs) {
-  const S = Number(score) | 0;
-  const T = Math.max(0, Number(timeMs) | 0);
-  return S * 1_000_000_000 - T; // büyük daha iyi → ZREVRANGE ile okunacak
-}
+// Skor: önce matched (büyük olan ↑), eşitse daha hızlı (time küçük olan ↑)
+const composite = (matched, timeMs) => matched * 1_000_000_000 - timeMs;
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
+    req.on('error', reject);
   });
 }
 
-export default async function handler(req) {
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
 
-  let body;
-  try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+  try {
+    const body = await readJson(req);
+    const { handle, matched, timeMs } = body;
 
-  const handle = normalizeHandle(body.handle);
-  const score = Number(body.score) | 0;
-  const timeMs = Math.max(0, Number(body.timeMs) | 0);
-  if (!Number.isFinite(score) || score < 0) return json({ error: "invalid score" }, 400);
-  if (!Number.isFinite(timeMs)) return json({ error: "invalid timeMs" }, 400);
+    if (!handle || typeof matched !== 'number' || typeof timeMs !== 'number') {
+      res.statusCode = 400; res.setHeader('content-type','application/json');
+      res.end(JSON.stringify({ error: 'Invalid payload' })); return;
+    }
 
-  const userKey = `${NS}:user:${handle}`;
+    const h = String(handle).toLowerCase().replace(/^@/, '').trim();
+    const m = Math.max(0, Math.min(8, Math.floor(matched)));
+    const t = Math.max(0, Math.min(3_600_000, Math.floor(timeMs))); // <=1 saat güvenlik
 
-  // Mevcut değerleri al
-  const [prevScore, prevTime] = await redis.hmget(userKey, "score", "timeMs");
-  const pS = prevScore != null ? Number(prevScore) : null;
-  const pT = prevTime != null ? Number(prevTime) : null;
+    const r = getRedis();
+    const cur = await r.zscore('smm:board', h);
+    const curNum = cur == null ? null : Number(cur);
+    const nextScore = composite(m, t);
 
-  // Yalnızca iyileşme varsa güncelle
-  const improved =
-    pS == null ||
-    score > pS ||
-    (score === pS && (pT == null || timeMs < pT));
+    let updated = false;
+    if (curNum == null || nextScore > curNum) {
+      const multi = r.multi();
+      multi.zadd('smm:board', nextScore, h);
+      multi.hset(`smm:detail:${h}`,
+        'matched', String(m),
+        'timeMs', String(t),
+        'updatedAt', String(Date.now())
+      );
+      await multi.exec();
+      updated = true;
+    }
 
-  if (!improved) {
-    return json({ ok: true, improved: false, handle, score: pS ?? 0, timeMs: pT ?? 0 });
+    res.statusCode = 200; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ updated }));
+  } catch (e) {
+    res.statusCode = 500; res.setHeader('content-type','application/json');
+    res.end(JSON.stringify({ error: String(e) }));
   }
-
-  const now = Date.now();
-  const rankScore = makeRankScore(score, timeMs);
-
-  await Promise.all([
-    redis.hset(userKey, { score, timeMs, updatedAt: now }),
-    redis.zadd(RANK_KEY, { score: rankScore, member: handle }),
-  ]);
-
-  return json({ ok: true, improved: true, handle, score, timeMs });
-}
+};
