@@ -2,422 +2,599 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lamumu Run – 3-Lane Runner</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <title>Sentient Memory Match</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     :root{
-      /* Lamumu palette */
-      --lamu-blue:#2D6BFF;
-      --lamu-red:#FF3B59;
-      --lamu-pink:#FF66CC;
-
-      /* map to existing names */
-      --amber: var(--lamu-blue);
-      --teal:  var(--lamu-pink);
+      --amber:#D8772B; --teal:#1E6A6B;
       --ink:#0A0B0D;
+      --gap:10px;
+      --board-max:520px;
+      --ring:0 0 0 3px rgba(216,119,43,.28);
+      --vh:1vh; /* iOS fix */
+    }
 
-      --panel:#11161b; --muted:#c9d3de; --ink2:#0E141A;
-      --accent:#7bd389; --danger:#ff6b6b; 
-    }
-    *{box-sizing:border-box}
-    html,body{
-      margin:0; font-family:Montserrat,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      color:#EDEFF2;
-      background-color:var(--ink);
-      background-image:
-        radial-gradient(900px 600px at 18% 8%, rgba(45,107,255,.30), transparent 75%),
-        radial-gradient(800px 520px at 82% 10%, rgba(255,59,89,.30), transparent 75%),
-        radial-gradient(900px 700px at 50% 92%, rgba(255,102,204,.30), transparent 75%),
-        radial-gradient(60% 40% at 50% 110%, rgba(255,255,255,.04), transparent 75%),
-        linear-gradient(180deg, #0b0d10 0%, #0f1216 100%);
-      background-repeat:no-repeat; background-attachment:fixed, fixed, fixed, scroll, scroll; background-size:cover, cover, cover, auto, auto;
-    }
+    *{ box-sizing:border-box; margin:0; padding:0; font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+
     body{
-      margin:0; font-family:Montserrat,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      color:#EDEFF2; background: var(--ink);
+      display:flex; flex-direction:column; align-items:center; gap:1rem;
+      min-height:calc(var(--vh) * 100); padding:1rem; padding-bottom:130px;
+      color:#EDEFF2; background-color:var(--ink);
       background:
-        radial-gradient(60% 50% at 20% 0%, rgba(30,106,107,.25), transparent 70%),
-        radial-gradient(70% 60% at 90% 20%, rgba(216,119,43,.18), transparent 70%),
-        linear-gradient(180deg, #0b0e12 0%, #0a0d11 100%);
+        url('images/bg.png') center/cover no-repeat fixed,
+        radial-gradient(55% 40% at 50% 105%, rgba(216,119,43,.22), transparent 70%),
+        linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%);
+    }
+    body::before{
+      content:""; position:fixed; inset:0; pointer-events:none; opacity:.18;
+      background-image:
+        radial-gradient(rgba(30,106,107,.25) 1px, transparent 1px),
+        radial-gradient(rgba(216,119,43,.22) 1px, transparent 1px);
+      background-size:160px 160px, 220px 220px;
+      background-position:0 0, 80px 120px;
     }
 
-    /* Sağ sütunu esnek yap (dar ekranda daha ince, geniş ekranda 280px'e kadar) */
-    .layout{
+    h1,h2{ text-align:center; color:var(--amber); }
+    h1{ font-size:2rem; line-height:1.2; text-shadow:0 0 18px rgba(216,119,43,.35); }
+
+    /* INTRO */
+    #intro{
+      position:fixed; inset:0; background:rgba(10,11,13,.86);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:1.2rem; text-align:center; padding:1.5rem;
+      box-shadow:var(--ring); border-top:1px solid rgba(216,119,43,.2); border-bottom:1px solid rgba(30,106,107,.2);
+      z-index:50;
+    }
+    #intro p{ max-width:520px; line-height:1.45; color:#dbe3ea; }
+    #xname-input{
+      padding:.6rem 1rem; border-radius:10px; border:1px solid rgba(216,119,43,.35);
+      background:#0f1316; color:#fff; font-size:1rem; width:min(280px,80vw); box-shadow:var(--ring);
+    }
+
+    /* INFO */
+    #game-info{ display:flex; gap:1rem; font-size:1.05rem; color:#dbe3ea; flex-wrap:wrap; justify-content:center; }
+
+    /* BOARD */
+    #board{
+      width:min(95vw, var(--board-max));
       display:grid;
-      grid-template-columns: minmax(0,1fr) clamp(200px, 26vw, 280px);
-      gap:16px; max-width:1120px; margin:18px auto; padding:0 12px;
-    }
-    @media (max-width: 860px){ .layout{ grid-template-columns:1fr; } }
-
-    /* HUD */
-    #hud{position:relative; height:48px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
-    #scoreBox{background:var(--panel); padding:8px 12px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.25); font-weight:700; border:1px solid rgba(216,119,43,.25)}
-    #userBox{display:flex; align-items:center; gap:10px; background:var(--panel); padding:6px 10px; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.25); border:1px solid rgba(30,106,107,.35)}
-    #userBox img{width:28px; height:28px; border-radius:50%; object-fit:cover; border:2px solid rgba(216,119,43,.45)}
-    #userBox .hdl{font-weight:800}
-
-    /* Game area */
-    #gameWrap{position:relative}
-
-    /* KANVAS: genişlik 520px, 96vw ve 90vh*(9/16) limitlerinin en küçüğü */
-    #game{
-      width: min(520px, 96vw, calc(90vh * 9/16));
-      aspect-ratio: 9/16;
-      background:#0a0f16; border-radius:18px; box-shadow: 0 12px 40px rgba(0,0,0,.35); border:1px solid #1e2a3d
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:var(--gap); margin-top:.5rem;
     }
 
-    .overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);}
-    .card{width:min(520px, 92vw); background:var(--panel); border:1px solid #222b3a; padding:18px; border-radius:18px; box-shadow: 0 30px 80px rgba(0,0,0,.45)}
-    .title{font-size:22px; font-weight:800; margin:0 0 8px; color:var(--amber)}
-    .muted{color:var(--muted)}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .row > *{flex:1}
-    input[type=text]{width:100%; background:#0f1420; color:#fff; border:1px solid rgba(216,119,43,.35); padding:12px 14px; border-radius:12px; outline:none}
-    button{cursor:pointer; background:linear-gradient(90deg,var(--amber),var(--teal)); color:#fff; border:0; padding:12px 16px; border-radius:12px; font-weight:800}
-    button.secondary{background:#223049}
-    button.ghost{background:transparent; border:1px solid #2a3550}
-    .grid{display:grid; gap:12px}
-
-    /* mobile arrows */
-    #controls{position:absolute; inset:0; pointer-events:none}
-    .ctrlBtn{position:absolute; bottom:18px; width:84px; height:84px; border-radius:50%; background:rgba(255,255,255,.05); border:1px solid #25324a; display:grid; place-items:center; font-size:22px; font-weight:800; pointer-events:auto; user-select:none}
-    .ctrlBtn:active{transform:scale(.98)}
-    .left{left:14px}
-    .right{right:14px}
-
-    /* Right side Leaderboard */
-    #leaderboard{background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d); border:2px solid var(--amber); box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset; border-radius:16px; padding:12px; max-height:70vh; overflow:auto}
-    #lb-title{font-weight:800; color:var(--amber); display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
-    #lb-meta{font-size:.85rem; opacity:.85}
-    #lb-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px}
-    .lb-item{display:flex; align-items:center; gap:.6rem; background:rgba(255,255,255,.02); padding:6px 8px; border-radius:10px; border:1px solid rgba(216,119,43,.18)}
-    .lb-rank{width:2.2rem; text-align:right; font-weight:800; color:var(--amber)}
-    .lb-avatar{width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(216,119,43,.6)}
-    .lb-handle{font-weight:700}
-    .lb-stats{margin-left:auto; opacity:.9; font-size:.95rem}
-    #lb-loading{text-align:center; padding:.5rem 0; opacity:.7; display:none}
-
-    /* Game Over panel pinned to edge */
-    #gameover{ position:fixed; top:50%; left:14px; transform:translateY(-50%); background:transparent; backdrop-filter:none; display:none; align-items:center; justify-content:center; z-index:60; pointer-events:none }
-    #gameover .card{ width:300px; pointer-events:auto }
-    #gameover .sharePreview{ max-height:160px }
-    #gameover .sharePreview img{ width:100%; height:auto; max-height:160px; object-fit:contain; display:block }
-
-    /* Bottom-right social tag */
-    #socialTag { position: fixed; right: 12px; bottom: 12px; font-size: 12px; background: rgba(255,255,255,.04); border:1px solid #2a3550; padding: 6px 8px; border-radius: 10px; color:#c9d3de; z-index: 200; }
-    #socialTag a { color: #4da3ff; text-decoration: none; }
-    #socialTag a:hover { text-decoration: underline; }
-    #socialTag .sep { margin: 0 6px; opacity: .5; }
-
-    @media (max-width: 860px){
-      .layout{ grid-template-columns:1fr; }
-      /* Mobilde #game genişliği yukarıdaki min(...) kuralıyla yönetiliyor; ekstra kural yok */
-      #leaderboard{ max-height:30vh; }
-      #gameover{ left:50%; transform:translate(-50%,-50%); }
-      #gameover .card{ width:min(88vw, 360px); }
-      #gameover .row{ flex-direction:column }
-      .ctrlBtn{ width:64px; height:64px; bottom:12px }
+    .card{ position:relative; width:100%; aspect-ratio:1/1; perspective:600px; cursor:pointer; }
+    .card img{
+      position:absolute; inset:0; width:100%; height:100%; border-radius:12px;
+      backface-visibility:hidden; transition: transform .45s;
+      border:2px solid rgba(30,106,107,.28); box-shadow:0 0 10px rgba(30,106,107,.16);
+      object-fit:cover;
     }
-    body::before{ content:""; position:fixed; inset:0; pointer-events:none; opacity:.20; background-image: radial-gradient(rgba(45,107,255,.08) 0.6px, transparent 0.7px), radial-gradient(rgba(255,102,204,.07) 0.6px, transparent 0.7px); background-size: 26px 26px, 34px 34px; background-position: 0 0, 13px 17px; z-index:0; }
+    .card .front{ transform: rotateY(180deg); }
+    .card .back { transform: rotateY(0deg); background:#12171b; }
+    .card.flip .front{ transform: rotateY(0deg); }
+    .card.flip .back { transform: rotateY(180deg); }
+    .card.matched{ cursor:default; }
+    .card.matched img{ border-color:rgba(216,119,43,.75); box-shadow:0 0 18px rgba(216,119,43,.45); }
+
+    /* RESULT */
+    #result{
+      display:none; flex-direction:column; align-items:center; gap:.55rem;
+      padding:1.2rem 1.4rem; border:2px solid var(--amber); border-radius:16px;
+      box-shadow:0 0 16px rgba(216,119,43,.45), 0 0 24px rgba(30,106,107,.32) inset;
+      background:linear-gradient(180deg, rgba(15,19,22,.92), rgba(10,11,13,.92));
+      color:#eef3f7; z-index:10; max-width:min(92vw, 520px);
+    }
+    #result-rank{ font-weight:800; color:var(--amber); }
+
+    #buttons{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; }
+    button, a.button{
+      border:none; color:#0c0e0f; font-weight:800; cursor:pointer; text-decoration:none; letter-spacing:.2px;
+      padding:.65rem 1.1rem; border-radius:12px;
+      background:linear-gradient(90deg, var(--amber), var(--teal));
+      box-shadow:0 6px 18px rgba(216,119,43,.35), 0 0 0 1px rgba(30,106,107,.25) inset;
+      touch-action: manipulation;
+    }
+    .button-sm{ padding:.45rem .8rem; font-weight:700; font-size:.9rem; }
+    button[disabled]{ opacity:.6; cursor:not-allowed; }
+    button:not([disabled]):hover, a.button:hover{ filter:brightness(1.08); box-shadow:0 8px 22px rgba(216,119,43,.45); }
+    button:active, a.button:active{ transform: translateY(1px); }
+
+    /* HIDDEN SHARE CARD */
+    #share-wrapper{ position:absolute; left:-10000px; top:-10000px; }
+    .share-card{
+      width:420px; height:260px; border-radius:16px;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem;
+      color:#fff; border:4px solid var(--amber); box-shadow:0 0 16px rgba(30,106,107,.5); overflow:hidden;
+    }
+    .share-avatar{ width:56px; height:56px; border-radius:50%; border:3px solid var(--amber); object-fit:cover; }
+    .share-card h2{ margin-bottom:.1rem; font-size:1.4rem; color:var(--amber); }
+    .share-card p{ font-size:1rem; color:#f3e9e2; }
+    .share-rank{ font-weight:800; color:var(--amber); }
+
+    /* PLAYER BADGE */
+    #player-badge{
+      position:fixed; top:1rem; right:1rem; z-index:20;
+      display:flex; align-items:center; gap:.6rem;
+      padding:.5rem .7rem; border-radius:999px;
+      background:linear-gradient(180deg,#14181c,#0b0d10);
+      border:1px solid rgba(216,119,43,.35); box-shadow:var(--ring);
+      display:none;
+    }
+    #player-badge img{ width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(216,119,43,.6); }
+    #player-badge span{ color:#e7edf3; font-weight:700; }
+
+    /* LIVE SCORE CARD */
+    #live-card-container{
+      position:fixed; left:0; right:0;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      z-index:25; display:flex; justify-content:center; pointer-events:none;
+    }
+    #live-card{
+      pointer-events:auto;
+      width:min(360px, 92vw); border-radius:16px; padding:.75rem 1rem;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      border:2px solid var(--amber);
+      box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
+      display:flex; align-items:center; gap:.8rem;
+    }
+    #live-card img{ width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid rgba(216,119,43,.7); }
+    #live-meta{ display:flex; flex-direction:column; line-height:1.25; }
+    #live-name{ font-weight:800; color:var(--amber); }
+    #live-stats{ color:#e7edf3; opacity:.95; font-size:.95rem; }
+    #live-actions{ margin-left:auto; display:flex; gap:.5rem; }
+
+    /* CREDITS */
+    #credits{
+      position:fixed; bottom:calc(70px + env(safe-area-inset-bottom, 0px)); right:1rem; max-width:60vw;
+      font-size:.9rem; line-height:1.3; text-align:right; opacity:.6;
+    }
+    #credits a{ color:var(--amber); text-decoration:underline; }
+
+    /* ------- LEADERBOARD (always visible) ------- */
+    #leaderboard{
+      position:fixed; top:6rem; right:1rem; z-index:40;
+      width:min(320px, 90vw); max-height:70vh; overflow:auto;
+      padding:0.9rem 1rem; border-radius:16px;
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      border:2px solid var(--amber);
+      box-shadow:0 0 16px rgba(216,119,43,.35), 0 0 24px rgba(30,106,107,.25) inset;
+      display:block;
+    }
+    #lb-title{ font-weight:800; color:var(--amber); margin-bottom:.4rem; display:flex; justify-content:space-between; align-items:center; }
+    #lb-meta{ font-size:.85rem; opacity:.8; color:#dbe3ea; }
+    #lb-list{ list-style:none; display:flex; flex-direction:column; gap:.35rem; }
+    .lb-item{ display:flex; align-items:center; gap:.6rem; }
+    .lb-rank{ width:2.2rem; text-align:right; font-weight:800; color:var(--amber); }
+    .lb-avatar{ width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(216,119,43,.6); }
+    .lb-handle{ font-weight:700; color:#e7edf3; }
+    .lb-stats{ margin-left:auto; opacity:.9; font-size:.95rem; }
+    #lb-loading{ text-align:center; padding:.5rem 0; opacity:.7; display:none; }
+
+    /* Mobil LB toggle */
+    #lb-toggle{
+      position:fixed; z-index:41;
+      right:.6rem; bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+      display:none;
+    }
+    .hidden{ display:none !important; }
+
+    /* MOBIL */
+    @media (max-width: 480px){
+      :root{ --gap:8px; }
+      h1{ font-size:1.6rem; }
+      #board{ width:94vw; }
+      #player-badge{ right:auto; left:.6rem; top:.6rem; }
+      #game-info{ font-size:.95rem; }
+      #result{ padding:1rem 1.1rem; }
+      #leaderboard{ right:.6rem; left:.6rem; top:auto; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); max-height:40vh; }
+      #lb-toggle{ display:block; }
+    }
+    @media (max-width: 360px){
+      #board{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #live-card img{ width:40px; height:40px; }
+      #live-stats{ font-size:.9rem; }
+    }
+    @media (orientation: landscape) and (max-height: 420px){
+      body{ padding-bottom:100px; }
+      #live-card{ width:min(420px, 94vw); padding:.6rem .8rem; }
+      #credits{ display:none; }
+    }
   </style>
 </head>
+
 <body>
-  <div class="layout">
-    <!-- LEFT: Game -->
-    <div>
-      <div id="hud">
-        <div id="scoreBox">Score: <span id="score">0</span></div>
-        <div id="userBox" title="X profile">
-          <img id="avatar" alt="pfp" src="" />
-          <div class="hdl" id="handle">@guest</div>
-        </div>
-      </div>
-      <div id="gameWrap">
-        <canvas id="game"></canvas>
-        <div id="controls">
-          <div class="ctrlBtn left" data-dir="-1">⟵</div>
-          <div class="ctrlBtn right" data-dir="1">⟶</div>
-        </div>
-      </div>
-    </div>
+  <h1>Sentient Memory Match</h1>
 
-    <!-- RIGHT: Leaderboard -->
-    <aside id="leaderboard">
-      <div id="lb-title"><span>🏆 Leaderboard</span><span id="lb-meta"></span></div>
-      <ol id="lb-list"></ol>
-      <div id="lb-loading">Loading…</div>
-    </aside>
+  <div id="game-info">
+    <span id="memorize-countdown"></span>
+    <span id="play-countdown"></span>
+    <span id="score-display"></span>
   </div>
 
-  <!-- Start dialog -->
-  <div id="start" class="overlay" role="dialog" aria-modal="true">
-    <div class="card grid">
-      <h1 class="title">Lamumu Run 🐄</h1>
-      <div class="muted">Enter your X (Twitter) handle; we’ll fetch your avatar and start the game.</div>
-      <div class="row">
-        <input id="inputHandle" type="text" placeholder="e.g., lamumu_io" autocomplete="off" />
-      </div>
-      <div class="row">
-        <button id="btnStart">Play</button>
-        <button id="btnNoX" class="secondary">Play without X</button>
-      </div>
-      <div class="muted" style="font-size:12px">Tip: Use ←/→ to switch lanes • collect ✨, avoid ▮</div>
+  <div id="board"></div>
+
+  <!-- RESULT -->
+  <div id="result">
+    <h2>Congratulations!</h2>
+    <p id="result-message"></p>
+    <p id="result-rank"></p>
+    <div id="buttons">
+      <a id="download-btn" class="button" href="#">Download Your Score Card</a>
+      <a id="share-btn" class="button" target="_blank" href="#">Share on X</a>
+      <button id="restart-btn" class="button">Restart</button>
     </div>
   </div>
 
-  <!-- Game Over dialog (compact panel) -->
-  <div id="gameover" class="overlay" role="dialog" aria-modal="true" style="display:none">
-    <div class="card grid">
-      <h2 class="title" style="margin-bottom:2px">Game Over</h2>
-      <div class="muted" id="finalTxt">Your score: 0</div>
-      <div class="sharePreview" style="width:100%; background:#0f1420; border:1px dashed #2a3550; border-radius:12px; padding:8px; display:flex; align-items:center; justify-content:center">
-        <img id="shareImg" alt="share card"/>
+  <!-- LEADERBOARD -->
+  <aside id="leaderboard">
+    <div id="lb-title">
+      <span>🏆 Leaderboard</span>
+      <span id="lb-meta"></span>
+    </div>
+    <ol id="lb-list"></ol>
+    <div id="lb-loading">Loading…</div>
+  </aside>
+  <button id="lb-toggle" class="button button-sm" aria-expanded="true">Hide LB</button>
+
+  <!-- INTRO OVERLAY -->
+  <div id="intro">
+    <h2>How to Play / Nasıl Oynanır?</h2>
+    <p><strong>EN:</strong> Memorize the positions of all cards in 15 seconds. Then the cards flip. Match as many pairs as you can in 20 seconds.</p>
+    <p><strong>TR:</strong> 15 saniyede kartların yerlerini ezberleyin. Sonra kartlar kapanır. 20 saniyede mümkün olduğunca çok çifti eşleştirin.</p>
+    <input id="xname-input" type="text" inputmode="text" autocomplete="username" placeholder="@kullaniciadi (X username)" />
+    <button id="start-btn" class="button">Start / Başlat</button>
+  </div>
+
+  <!-- PLAYER BADGE -->
+  <div id="player-badge">
+    <img id="profile-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+    <span id="profile-handle">@player</span>
+  </div>
+
+  <!-- LIVE SCORE CARD -->
+  <div id="live-card-container">
+    <div id="live-card">
+      <img id="live-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+      <div id="live-meta">
+        <div id="live-name">@player</div>
+        <div id="live-stats">Matches: 0/8 • Time: 0s</div>
       </div>
-      <div class="row">
-        <button id="btnAgain">Play Again</button>
-        <a id="dlBtn" download="lamumu-score.png"><button class="ghost" style="width:100%">Download Card</button></a>
-      </div>
-      <div class="row">
-        <button id="tweetBtn" class="secondary">Share on X</button>
+      <div id="live-actions">
+        <a id="live-download-btn" class="button button-sm" href="#">Download</a>
       </div>
     </div>
   </div>
 
-  <!-- Bottom-right social links -->
-  <div id="socialTag" aria-label="social handles">
-    discord: <span style="font-weight:700">tablemagicio</span>
-    <span class="sep">•</span>
-    x: <a href="https://x.com/tablemagicio" target="_blank" rel="noopener noreferrer">tablemagicio</a>
+  <!-- HIDDEN SHARE CARD TEMPLATE -->
+  <div id="share-wrapper">
+    <div class="share-card" id="share-card">
+      <img id="sc-avatar" class="share-avatar" src="" alt="avatar" crossOrigin="anonymous" />
+      <h2 id="sc-title">Sentient Memory Match</h2>
+      <p id="sc-username">@player</p>
+      <p id="sc-score">Score: 0/8</p>
+      <p id="sc-time">Time left: 0s</p>
+      <p id="sc-rank" class="share-rank">Rank: #–</p>
+    </div>
   </div>
 
+  <div id="credits">
+    created by: <a href="https://twitter.com/cryptoayax" target="_blank">x:cryptoayax</a> • discord: cryptoayax
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
-  // ==================== SETTINGS ====================
-  const LANES = 3;
-  const BASE_SPEED = 3.8;      // slightly faster (px/frame @60fps)
-  const MAX_SPEED = 9.0;       // upper limit
-  const ACCEL_EVERY_MS = 6000; // speed up every 6s
-  const SPEED_STEP = 0.6;
+    // === AYARLAR / Mobil açık ===
+    const MOBILE_ENABLED = true;
+    const isMobile = () => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
 
-  const OBSTACLE_SPAWN_MS = [800, 1200];
-  const REWARD_SPAWN_MS   = [900, 1500];
+    // iOS gerçek 100vh düzeltmesi
+    function setVh(){ document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px'); }
+    document.addEventListener('DOMContentLoaded', () => { setVh(); window.addEventListener('resize', setVh, {passive:true}); });
 
-  const PLAYER_W = 54, PLAYER_H = 62;  // cow size (px)
-  const COW_IMG_SRC = 'assets/cow.png'; // your cow image
-  const REWARD_IMG_SRC = 'assets/reward.png'; // collectible icon (PNG)
+    // CONFIG
+    const FRONT_IMAGES = [
+      "images/img1.png","images/img2.png","images/img3.png","images/img4.png",
+      "images/img5.png","images/img6.png","images/img7.png","images/img8.png"
+    ];
+    const BACK_IMAGE = "images/back.png";
+    const MEMORIZE_SECONDS = 15, PLAY_SECONDS = 20;
 
-  // ---- API (Redis leaderboard) ----
-  const API_BASE = '';
+    // DOM refs
+    const boardEl = document.getElementById("board"),
+          memorizeCd = document.getElementById("memorize-countdown"),
+          playCd = document.getElementById("play-countdown"),
+          scoreDisplay = document.getElementById("score-display"),
+          resultCard = document.getElementById("result"),
+          resultMsg = document.getElementById("result-message"),
+          resultRank = document.getElementById("result-rank"),
+          downloadBtn = document.getElementById("download-btn"),
+          shareBtn = document.getElementById("share-btn"),
+          restartBtn = document.getElementById("restart-btn"),
+          intro = document.getElementById("intro"),
+          startBtn = document.getElementById("start-btn"),
+          xnameInput = document.getElementById("xname-input"),
+          playerBadge = document.getElementById("player-badge"),
+          profileAvatar = document.getElementById("profile-avatar"),
+          profileHandle = document.getElementById("profile-handle"),
+          liveContainer = document.getElementById("live-card-container"),
+          liveAvatar = document.getElementById("live-avatar"),
+          liveName = document.getElementById("live-name"),
+          liveStats = document.getElementById("live-stats"),
+          liveDownloadBtn = document.getElementById("live-download-btn"),
+          shareCard = document.getElementById("share-card"),
+          scAvatar = document.getElementById("sc-avatar"),
+          scUsername = document.getElementById("sc-username"),
+          scScore = document.getElementById("sc-score"),
+          scTime = document.getElementById("sc-time"),
+          scRank = document.getElementById("sc-rank"),
+          lb = document.getElementById('leaderboard'),
+          lbList = document.getElementById('lb-list'),
+          lbMeta = document.getElementById('lb-meta'),
+          lbLoading = document.getElementById('lb-loading'),
+          lbToggle = document.getElementById('lb-toggle');
 
-  // ==================== STATE ====================
-  let state = {
-    running:false, speed: BASE_SPEED, laneX: [],
-    player: { lane:1, x:0, y:0, w:PLAYER_W, h:PLAYER_H },
-    obstacles: [], rewards: [], score: 0,
-    lastObstacle: 0, lastReward: 0, lastAccel: 0,
-    dpr: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
-    handle: '@guest', avatarImg: null, runStartMs: 0,
-  };
+    // STATE
+    let firstCard = null, lockBoard = false, matchedPairs = 0,
+        playTimer, playTimeLeft = PLAY_SECONDS, xname = "player",
+        isMemorizePhase = false, memorizeTimer, memorizeTimeLeft = MEMORIZE_SECONDS,
+        avatarUrl = "";
+    let playStartMs = 0; // süre ölçümü
+    // Leaderboard state (sonsuz kaydırma)
+    let lbOffset = 0, lbPage = 50, lbTotal = null, lbIsLoading = false;
+    let myRank = null;
 
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+    const sanitizeHandle = (v) => v.replace(/\s+/g,"").replace(/^@/,"");
+    const resolveAvatar = (handle) => `https://unavatar.io/x/${encodeURIComponent(handle)}`;
 
-  function resize(){
-    // Ekran ve sol kolon genişliği + yüksekliğe göre güvenli bir genişlik
-    const wrap = document.getElementById('gameWrap');
-    const maxW = 520;
-    const wByWrap = (wrap?.clientWidth || maxW);             // sol kolonun izin verdiği genişlik
-    const wByVw   = window.innerWidth * 0.96;                // 96vw
-    const wByVh   = window.innerHeight * 0.90 * (9/16);      // 90vh yüksekliğe göre 9:16 oranı
-
-    const wCss = Math.floor(Math.min(maxW, wByWrap, wByVw, wByVh));
-    const hCss = Math.floor(wCss * 16/9);
-    const d = state.dpr;
-
-    canvas.style.width = wCss+'px'; 
-    canvas.style.height = hCss+'px';
-    canvas.width  = Math.floor(wCss * d);
-    canvas.height = Math.floor(hCss * d);
-
-    const laneWidth = canvas.width / LANES;
-    state.laneX = [ laneWidth*0.5, laneWidth*1.5, laneWidth*2.5 ];
-    state.player.x = state.laneX[state.player.lane];
-    state.player.y = canvas.height - (state.player.h*2.2);
-  }
-  window.addEventListener('resize', resize); resize();
-
-  // ============== IMAGES ==============
-  const images = { cow: null, reward: null };
-  if (COW_IMG_SRC){ images.cow = new Image(); images.cow.crossOrigin='anonymous'; images.cow.src = COW_IMG_SRC; images.cow.onerror=()=>{ images.cow=null; }; }
-  if (REWARD_IMG_SRC){ images.reward = new Image(); images.reward.crossOrigin='anonymous'; images.reward.src = REWARD_IMG_SRC; images.reward.onerror=()=>{ images.reward=null; }; }
-
-  function drawCow(x,y,w,h){
-    if (images.cow && images.cow.complete){ ctx.drawImage(images.cow, x - w/2, y - h/2, w, h); return; }
-    ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#ffffff'; roundRect(-w/2, -h/2, w, h, 12); ctx.fill();
-    ctx.font = Math.floor(h*0.8)+"px serif"; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🐄', 0, 2); ctx.restore();
-  }
-  function drawObstacle(x,y,w,h){ ctx.save(); ctx.fillStyle = '#2f3a52'; roundRect(x-w/2, y-h/2, w, h, 10); ctx.fill(); ctx.fillStyle = 'rgba(255,107,107,.9)'; ctx.fillRect(x-w/2+6, y-2, w-12, 4); ctx.restore(); }
-  function drawReward(x,y,r){
-    if (images.reward && images.reward.complete){
-      ctx.save();
-      ctx.shadowColor = '#7bd389';
-      ctx.shadowBlur = 12;
-      ctx.drawImage(images.reward, x - r, y - r, r * 2, r * 2);
-      ctx.restore();
-      return;
+    function setAllAvatars(url){
+      profileAvatar.src = url; liveAvatar.src = url; scAvatar.src = url;
+      const onerr = () => { profileAvatar.src = BACK_IMAGE; liveAvatar.src = BACK_IMAGE; scAvatar.src = BACK_IMAGE; };
+      profileAvatar.onerror = onerr; liveAvatar.onerror = onerr; scAvatar.onerror = onerr;
     }
-    ctx.save();
-    const grd = ctx.createRadialGradient(x,y,1, x,y,r);
-    grd.addColorStop(0, 'rgba(255,255,255,.95)');
-    grd.addColorStop(1, 'rgba(123,211,137,.2)');
-    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x,y,r*0.72,0,Math.PI*2);
-    ctx.fillStyle = '#79e08c'; ctx.fill();
-    ctx.fillStyle = '#0a0f16';
-    ctx.font = Math.floor(r*1.2)+"px sans-serif";
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✨', x, y+1);
-    ctx.restore();
-  }
 
-  function roundRect(x,y,w,h,r){ const rr = Math.min(r, w/2, h/2); ctx.beginPath(); ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y, x+w,y+h, rr); ctx.arcTo(x+w,y+h, x,y+h, rr); ctx.arcTo(x,y+h, x,y, rr); ctx.arcTo(x,y, x+w,y, rr); ctx.closePath(); }
+    // ------ Leaderboard fetchers ------
+    async function fetchLeaderboardPage(start=0, count=50, rankFor=null){
+      const url = new URL('/api/leaderboard', window.location.origin);
+      url.searchParams.set('start', String(start));
+      url.searchParams.set('count', String(count));
+      if (rankFor) url.searchParams.set('rankFor', rankFor);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('leaderboard failed');
+      return res.json(); // {items,start,count,total,rank?}
+    }
 
-  // ============== GAME LOOP ==============
-  let lastMs = 0;
-  function loop(ms){ if(!state.running){ return; } const dt = lastMs ? (ms - lastMs) : 16; lastMs = ms; update(dt); render(); requestAnimationFrame(loop); }
+    function formatMs(ms){ return (ms/1000).toFixed(2) + "s"; }
+    function avatarFor(handle){ return `https://unavatar.io/x/${encodeURIComponent(handle)}`; }
 
-  function update(dt){
-    state.lastAccel += dt; if (state.lastAccel >= ACCEL_EVERY_MS){ state.lastAccel = 0; state.speed = Math.min(MAX_SPEED, state.speed + SPEED_STEP); }
-    state.lastObstacle += dt; state.lastReward += dt;
-    const nextObs = randRange(OBSTACLE_SPAWN_MS[0], OBSTACLE_SPAWN_MS[1]);
-    const nextRew = randRange(REWARD_SPAWN_MS[0], REWARD_SPAWN_MS[1]);
-    if (state.lastObstacle >= nextObs){ state.lastObstacle = 0; spawnObstacle(); }
-    if (state.lastReward >= nextRew){ state.lastReward = 0; spawnReward(); }
+    function renderLeaderboardItems(items, startIndex){
+      items.forEach((it, idx) => {
+        const rank = startIndex + idx + 1;
+        const li = document.createElement('li');
+        li.className = 'lb-item';
+        const av = avatarFor(it.handle);
+        li.innerHTML = `
+          <span class="lb-rank">#${rank}</span>
+          <img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/>
+          <span class="lb-handle">@${it.handle}</span>
+          <span class="lb-stats">${it.matched}/8 • ${formatMs(it.timeMs)}</span>
+        `;
+        lbList.appendChild(li);
+      });
+    }
 
-    const vy = state.speed * state.dpr; for (const o of state.obstacles){ o.y += vy; } for (const r of state.rewards){ r.y += vy; }
+    async function resetAndLoadLeaderboard(rankFor=null){
+      lbList.innerHTML = '';
+      lbOffset = 0; lbTotal = null; myRank = null;
+      await loadMoreLeaderboard(rankFor); // ilk sayfa
+    }
 
-    const H = canvas.height;
-    state.obstacles = state.obstacles.filter(o => o.y - o.h/2 < H+10);
-    state.rewards   = state.rewards.filter(r => !r.hit && (r.y - r.r < H+10));
+    async function loadMoreLeaderboard(rankFor=null){
+      if (lbIsLoading) return;
+      lbIsLoading = true; lbLoading.style.display = 'block';
+      try{
+        const data = await fetchLeaderboardPage(lbOffset, lbPage, rankFor);
+        if (lbTotal == null) lbTotal = data.total ?? 0;
+        if (typeof data.rank === 'number') myRank = data.rank;
+        renderLeaderboardItems(data.items || [], lbOffset);
+        lbOffset += (data.items || []).length;
+        lbMeta.textContent = lbTotal ? `${lbOffset}/${lbTotal}` : '';
+      }finally{
+        lbIsLoading = false; lbLoading.style.display = 'none';
+      }
+    }
 
-    // collisions
-    const p = state.player;
-    for (const o of state.obstacles){ if (o.lane === p.lane && Math.abs(o.y - p.y) < (o.h/2 + p.h/2 - 6)){ return gameOver(); } }
-    for (const r of state.rewards){ if (!r.hit && r.lane === p.lane && Math.abs(r.y - p.y) < (r.r + p.h/2 - 8)){ r.hit = true; state.score += 5; bumpScore(); } }
+    // Scroll ile daha fazla yükle
+    lb.addEventListener('scroll', async () => {
+      const nearBottom = lb.scrollTop + lb.clientHeight >= lb.scrollHeight - 80;
+      if (nearBottom && (lbTotal == null || lbOffset < lbTotal)) {
+        await loadMoreLeaderboard(); // devamında rankFor gerekmiyor
+      }
+    });
 
-    document.getElementById('score').textContent = state.score;
-  }
+    // Mobilde LB görünürlüğünü aç/kapat (ekran alanı için)
+    if (lbToggle){
+      lbToggle.addEventListener('click', () => {
+        const hidden = lb.classList.toggle('hidden');
+        lbToggle.textContent = hidden ? 'Show LB' : 'Hide LB';
+        lbToggle.setAttribute('aria-expanded', String(!hidden));
+      });
+    }
 
-  function render(){
-    const W = canvas.width, H = canvas.height; ctx.clearRect(0,0,W,H);
-    ctx.save(); ctx.fillStyle = '#0d1422'; roundRect(8,8,W-16,H-16,18); ctx.fill();
-    const laneW = W / LANES; ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 2 * state.dpr;
-    for (let i=1;i<LANES;i++){ const x = laneW * i; ctx.setLineDash([10*state.dpr, 12*state.dpr]); ctx.beginPath(); ctx.moveTo(x, 10); ctx.lineTo(x, H-10); ctx.stroke(); }
-    ctx.restore();
-    for (const r of state.rewards){ drawReward(state.laneX[r.lane], r.y, r.r); }
-    for (const o of state.obstacles){ drawObstacle(state.laneX[o.lane], o.y, o.w, o.h); }
-    drawCow(state.player.x, state.player.y, state.player.w*state.dpr, state.player.h*state.dpr);
-  }
+    // START
+    startBtn.addEventListener("click", async () => {
+      const val = sanitizeHandle(xnameInput.value || "");
+      if (!val) { alert("Lütfen X kullanıcı adınızı girin (örn. @sizinadiniz)."); return; }
+      xname = val; avatarUrl = resolveAvatar(xname); setAllAvatars(avatarUrl);
+      profileHandle.textContent = "@" + xname; liveName.textContent = "@" + xname; scUsername.textContent = "@" + xname;
 
-  function spawnObstacle(){ const lane = Math.floor(Math.random()*LANES); state.obstacles.push({ lane, y: -40, w: 52*state.dpr, h: randRange(58,72)*state.dpr }); }
-  function spawnReward(){ const lane = Math.floor(Math.random()*LANES); state.rewards.push({ lane, y: -20, r: randRange(12,15)*state.dpr, hit:false }); }
-  function moveLane(delta){ const old = state.player.lane; let nl = Math.max(0, Math.min(2, old + delta)); if (nl !== old){ state.player.lane = nl; state.player.x = state.laneX[nl]; } }
-  function randRange(a,b){ return a + Math.random()*(b-a); }
-  function bumpScore(){ const el = document.getElementById('scoreBox'); el.animate([{ transform:'scale(1)' },{ transform:'scale(1.08)' },{ transform:'scale(1)' }], { duration:200, easing:'cubic-bezier(.2,.7,.2,1)' }); }
+      playerBadge.style.display = "flex";
+      liveContainer.style.display = "flex";
+      intro.style.display = "none";
+      initGame();
 
-  // ============== INPUT ==============
-  window.addEventListener('keydown', e => { if(!state.running) return; if (e.key === 'ArrowLeft') moveLane(-1); if (e.key === 'ArrowRight') moveLane(1); });
-  document.querySelectorAll('.ctrlBtn').forEach(btn =>{ btn.addEventListener('click', ()=> moveLane(parseInt(btn.dataset.dir,10))); });
-  let touchX=null, touchY=null; canvas.addEventListener('touchstart', e=>{ if(e.touches[0]){ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; }}); canvas.addEventListener('touchend', e=>{ if (touchX==null) return; const dx = (e.changedTouches[0]?.clientX||0) - touchX; const dy = (e.changedTouches[0]?.clientY||0) - touchY; if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 24){ moveLane(dx>0 ? 1 : -1); } touchX = touchY = null; });
+      // Kullanıcı girer girmez leaderboard’u sıfırdan yükle (rank dahil)
+      try { await resetAndLoadLeaderboard(xname); } catch(e){ console.error(e); }
+    });
 
-  function startGame(){ lastMs = 0; state.running = true; state.speed = BASE_SPEED; state.lastObstacle = 0; state.lastReward=0; state.lastAccel=0; state.obstacles.length = 0; state.rewards.length=0; state.score = 0; state.player.lane = 1; state.player.x = state.laneX[1]; state.runStartMs = Date.now(); hide(document.getElementById('start')); hide(document.getElementById('gameover')); requestAnimationFrame(loop); }
+    restartBtn.addEventListener("click", () => {
+      resultCard.style.display = "none";
+      boardEl.style.pointerEvents = "all";
+      initGame();
+    });
 
-  async function gameOver(){ state.running = false; const duration = Math.max(0, Date.now() - (state.runStartMs||Date.now())); const cardUrl = makeShareCard({ score: state.score, handle: state.handle, avatarImg: state.avatarImg }); document.getElementById('shareImg').src = cardUrl; document.getElementById('dlBtn').setAttribute('href', cardUrl); document.getElementById('finalTxt').textContent = `Your score: ${state.score}`; show(document.getElementById('gameover'));
-    // send score to backend + refresh leaderboard
-    try{ await submitScore(state.handle.replace('@',''), state.score, duration); await resetAndLoadLeaderboard(state.handle.replace('@','')); }catch(e){ console.warn('Leaderboard API error', e); }
-  }
-  function show(el){ el.style.display='flex'; } function hide(el){ el.style.display='none'; }
+    // INIT
+    function initGame(){
+      clearInterval(memorizeTimer); clearInterval(playTimer);
+      matchedPairs = 0; firstCard = null; lockBoard = false;
+      memorizeTimeLeft = MEMORIZE_SECONDS; playTimeLeft = PLAY_SECONDS;
+      createBoard();
+      isMemorizePhase = true;
+      boardEl.style.pointerEvents = 'none';
+      updateScore(); updateLiveCard();
+      startMemorizePhase();
+      requestAnimationFrame(() => window.scrollTo({top:0, behavior:"smooth"}));
+    }
 
-  // ============== START DIALOG ==============
-  const inputHandle = document.getElementById('inputHandle');
-  document.getElementById('btnStart').addEventListener('click', ()=> beginWithHandle(inputHandle.value.trim()));
-  document.getElementById('btnNoX').addEventListener('click', ()=> beginWithHandle(''));
+    function createBoard(){
+      const doubled = [...FRONT_IMAGES, ...FRONT_IMAGES];
+      shuffle(doubled);
+      boardEl.innerHTML = "";
+      doubled.forEach(src => {
+        const card = document.createElement("div");
+        card.className = "card flip";
+        card.innerHTML = `
+          <img class="front" src="${src}" alt=""/>
+          <img class="back" src="${BACK_IMAGE}" alt=""/>
+        `;
+        card.addEventListener("click", handleCard, {passive:true});
+        boardEl.appendChild(card);
+      });
+      updateScore();
+    }
 
-  function beginWithHandle(h){ if (h){ state.handle = h.startsWith('@') ? h : '@'+h; document.getElementById('handle').textContent = state.handle; loadAvatarFor(h); } else { state.handle = '@guest'; document.getElementById('handle').textContent = state.handle; setAvatar(null); } startGame(); resetAndLoadLeaderboard(state.handle.replace('@','')).catch(()=>{}); }
+    // Memorize phase
+    function startMemorizePhase(){
+      memorizeTimeLeft = MEMORIZE_SECONDS;
+      memorizeCd.textContent = `Memorize: ${memorizeTimeLeft}s`;
+      playCd.textContent = ""; updateLiveCard();
+      memorizeTimer = setInterval(() => {
+        memorizeTimeLeft--; memorizeCd.textContent = `Memorize: ${memorizeTimeLeft}s`; updateLiveCard();
+        if (memorizeTimeLeft <= 0) {
+          clearInterval(memorizeTimer);
+          flipAllToBack(); isMemorizePhase = false; boardEl.style.pointerEvents = 'all';
+          startPlayPhase();
+        }
+      }, 1000);
+    }
+    function flipAllToBack(){ document.querySelectorAll(".card").forEach(c => c.classList.remove("flip")); }
 
-  // ============== X AVATAR LOADING (hardened) ==============
-  function candidateAvatarUrls(handle){ const h = String(handle).replace(/^@/,''); return [
-    `https://unavatar.io/x/${encodeURIComponent(h)}`,
-    `https://unavatar.io/twitter/${encodeURIComponent(h)}`,
-    `https://unavatar.io/${encodeURIComponent(h)}`,
-    `https://unavatar.io/https://x.com/${encodeURIComponent(h)}`,
-  ]; }
+    // Play phase
+    function startPlayPhase(){
+      playStartMs = Date.now();
+      playTimeLeft = PLAY_SECONDS;
+      playCd.textContent = `Time: ${playTimeLeft}s`; updateLiveCard();
+      playTimer = setInterval(() => {
+        playTimeLeft--; playCd.textContent = `Time: ${playTimeLeft}s`; updateLiveCard();
+        if (playTimeLeft <= 0) { clearInterval(playTimer); endGame(); }
+      }, 1000);
+    }
 
-  function tryLoad(url){ return new Promise((resolve,reject)=>{ const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>resolve(url); img.onerror=reject; img.src=url; setTimeout(()=>reject(new Error('timeout')), 6000); }); }
+    // Card click
+    function handleCard(e){
+      if (isMemorizePhase) return;
+      const card = e.currentTarget;
+      if (lockBoard || card === firstCard || card.classList.contains("matched")) return;
+      card.classList.add("flip");
+      if (!firstCard){ firstCard = card; return; }
 
-  async function resolveWorkingAvatar(handle){ const urls = candidateAvatarUrls(handle); for (const u of urls){ try{ const ok = await tryLoad(u); return ok; }catch(e){} } return null; }
+      if (frontSrc(card) === frontSrc(firstCard)){
+        card.classList.add("matched");
+        firstCard.classList.add("matched");
+        firstCard = null; matchedPairs++; updateScore(); updateLiveCard();
+        if (matchedPairs === FRONT_IMAGES.length) endGame();
+      }else{
+        lockBoard = true;
+        setTimeout(() => {
+          card.classList.remove("flip");
+          firstCard.classList.remove("flip");
+          firstCard = null; lockBoard = false;
+        }, 750);
+      }
+    }
 
-  function setAvatar(src){ const img = document.getElementById('avatar'); if (!src){ img.src = 'data:image/svg+xml;utf8,'+encodeURIComponent(makeFallbackPfpSvg()); state.avatarImg=null; return; } img.crossOrigin='anonymous'; img.src = src; img.onerror = ()=> { img.src = 'data:image/svg+xml;utf8,'+encodeURIComponent(makeFallbackPfpSvg()); state.avatarImg=null; }; img.onload = ()=> { const a = new Image(); a.crossOrigin='anonymous'; a.src = src; a.onload = ()=> state.avatarImg = a; a.onerror = ()=> state.avatarImg=null; } }
+    // End game
+    async function endGame(){
+      clearInterval(playTimer);
+      boardEl.style.pointerEvents = "none";
+      memorizeCd.textContent = ""; playCd.textContent = "";
+      const msg = `@${xname} — Score: ${matchedPairs}/${FRONT_IMAGES.length} • Time left: ${playTimeLeft}s`;
+      resultMsg.textContent = msg;
+      updateShareCardFields();
+      resultCard.style.display = "flex";
 
-  async function loadAvatarFor(handle){ const src = await resolveWorkingAvatar(handle); setAvatar(src); }
+      const tweetText = encodeURIComponent(`I just played Sentient Memory Match! My score: ${matchedPairs}/${FRONT_IMAGES.length}`);
+      const tweetUrl = encodeURIComponent(window.location.href);
+      shareBtn.href = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
 
-  // ============== SHARE & TWEET ==============
-  document.getElementById('btnAgain').addEventListener('click', startGame);
-  document.getElementById('tweetBtn').addEventListener('click', ()=>{ const text = encodeURIComponent(`I played Lamumu Run! My score: ${state.score} ${state.handle}\n#Lamumu`); const url = 'https://twitter.com/intent/tweet?text='+text; window.open(url, '_blank'); });
+      // ---- SCORE SUBMIT + RANK + LEADERBOARD REFRESH ----
+      try {
+        const elapsed = Math.max(0, Date.now() - playStartMs);
+        await submitScore(xname, matchedPairs, elapsed);
 
-  function makeFallbackPfpSvg(){ const initials = state.handle && state.handle.length>1 ? state.handle.replace('@','').slice(0,2).toUpperCase() : 'LM'; return `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'> <defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'> <stop offset='0%' stop-color='#2a3a5c'/> <stop offset='100%' stop-color='#162235'/> </linearGradient></defs> <rect width='100%' height='100%' fill='url(#g)'/> <text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat, sans-serif' font-size='28' fill='#eaf2ff' font-weight='700'>${initials}</text> </svg>`; }
+        // Rank ve ilk sayfa
+        await resetAndLoadLeaderboard(xname);
+        if (typeof myRank === 'number') resultRank.textContent = `Your Rank: #${myRank}`;
+        else resultRank.textContent = '';
 
-  // COMMON themed share card (compact)
-  function makeShareCard({score, handle, avatarImg}){
-    const W=960, H=540; // horizontal card
-    const c = document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+        // Share card'a da rank yaz
+        updateShareCardFields();
 
-    // background
-    const bg1 = g.createLinearGradient(0,0,0,H);
-    bg1.addColorStop(0,'#0b0e12'); bg1.addColorStop(1,'#0e141a');
-    g.fillStyle = bg1; g.fillRect(0,0,W,H);
-    g.fillStyle = 'rgba(30,106,107,.25)'; g.beginPath(); g.ellipse(W*0.15, H*0.2, 220, 120, 0, 0, Math.PI*2); g.fill();
-    g.fillStyle = 'rgba(216,119,43,.22)'; g.beginPath(); g.ellipse(W*0.85, H*0.25, 260, 140, 0, 0, Math.PI*2); g.fill();
+      } catch(e){ console.error('submit/leaderboard error', e); }
+    }
 
-    // header
-    g.fillStyle = '#EDEFF2'; g.font = '900 64px Montserrat, sans-serif'; g.fillText('LAMUMU RUN', 40, 110);
-    g.fillStyle = '#dbe3ea'; g.font = '700 28px Montserrat, sans-serif'; g.fillText('Score', 40, 170);
-    g.fillStyle = '#7bd389'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(String(score), 40, 260);
+    // Live & Share helpers
+    function updateScore(){ scoreDisplay.textContent = `Matches: ${matchedPairs}/${FRONT_IMAGES.length}`; }
+    function currentTimeLeft(){ return isMemorizePhase ? memorizeTimeLeft : playTimeLeft; }
+    function updateLiveCard(){
+      liveStats.textContent = `Matches: ${matchedPairs}/${FRONT_IMAGES.length} • Time: ${currentTimeLeft()}s`;
+      updateShareCardFields();
+    }
+    function updateShareCardFields(){
+      scUsername.textContent = "@" + xname;
+      scScore.textContent = `Score: ${matchedPairs}/${FRONT_IMAGES.length}`;
+      scTime.textContent = `Time left: ${currentTimeLeft()}s`;
+      scRank.textContent = `Rank: ${typeof myRank === 'number' ? '#' + myRank : '#–'}`;
+      if (avatarUrl) setAllAvatars(avatarUrl);
+    }
 
-    // player row
-    const at = handle || '@guest';
-    const AX=40, AY=320, AR=56; g.save(); g.beginPath(); g.arc(AX+AR, AY+AR, AR, 0, Math.PI*2); g.clip();
-    if (avatarImg){ g.drawImage(avatarImg, AX, AY, AR*2, AR*2); } else { g.fillStyle='#1b2436'; g.fillRect(AX,AY,AR*2,AR*2); g.fillStyle='#eaf2ff'; g.font='800 42px Montserrat, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText((at.replace('@','').slice(0,2)||'LM').toUpperCase(), AX+AR, AY+AR); g.textAlign='start'; g.textBaseline='alphabetic'; }
-    g.restore();
-    g.fillStyle='#EDEFF2'; g.font='800 42px Montserrat, sans-serif'; g.fillText(at, AX + AR*2 + 20, AY + AR + 14);
+    async function downloadCurrentScore(filename = "sentient-score.png"){
+      updateShareCardFields();
+      const canvas = await html2canvas(shareCard, {useCORS:true, backgroundColor:null});
+      const link = document.createElement("a");
+      link.download = filename; link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+    downloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
+    liveDownloadBtn.addEventListener("click", (e) => { e.preventDefault(); downloadCurrentScore(); });
 
-    // border + footer
-    g.strokeStyle = '#D8772B'; g.lineWidth = 6; rounded(g, 12, 12, W-24, H-24, 16); g.stroke();
-    g.fillStyle = '#9fb3d4'; g.font = '600 26px Montserrat, sans-serif'; g.fillText('lamumu.io', W-250, H-28);
+    async function submitScore(handle, matched, timeMs){
+      const res = await fetch('/api/submit-score', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ handle, matched, timeMs })
+      });
+      if (!res.ok) throw new Error('submit failed');
+      return res.json();
+    }
 
-    return c.toDataURL('image/png');
+    // Utils
+    const frontSrc = card => card.querySelector('.front').src;
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
 
-    function rounded(gc,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); gc.beginPath(); gc.moveTo(x+rr,y); gc.arcTo(x+w,y, x+w,y+h, rr); gc.arcTo(x+w,y+h, x,y+h, rr); gc.arcTo(x,y+h, x,y, rr); gc.arcTo(x,y, x+w,y, rr); gc.closePath(); }
-  }
-
-  // ============== LEADERBOARD (Redis API) ==============
-  const lb = document.getElementById('lb-list'); const lbMeta = document.getElementById('lb-meta'); const lbLoading = document.getElementById('lb-loading');
-  let lbOffset = 0, lbPage = 50, lbTotal = null, lbIsLoading = false;
-
-  function apiUrl(p){ return (API_BASE||'') + p; }
-  async function submitScore(handle, score, timeMs){ const res = await fetch(apiUrl('/api/submit-score'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ handle, score, timeMs }) }); if(!res.ok) throw new Error('submit failed'); return res.json(); }
-  async function fetchLeaderboardPage(start=0, count=50, rankFor=null){ const u = new URL(apiUrl('/api/leaderboard'), window.location.href); u.searchParams.set('start', String(start)); u.searchParams.set('count', String(count)); if (rankFor) u.searchParams.set('rankFor', rankFor); const res = await fetch(u, { headers:{'Accept':'application/json'} }); if(!res.ok) throw new Error('lb failed'); return res.json(); }
-  function formatMs(ms){ return (ms/1000).toFixed(2)+'s'; }
-  function avatarFor(handle){ return `https://unavatar.io/x/${encodeURIComponent(handle)}`; }
-  function renderLeaderboardItems(items, startIndex){ items.forEach((it, idx) => { const rank = startIndex + idx + 1; const li = document.createElement('li'); li.className='lb-item'; const av = avatarFor(it.handle); li.innerHTML = `<span class="lb-rank">#${rank}</span><img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/><span class="lb-handle">@${it.handle}</span><span class="lb-stats">${it.score} • ${formatMs(it.timeMs)}</span>`; lb.appendChild(li); }); }
-  async function resetAndLoadLeaderboard(rankFor=null){ lb.innerHTML=''; lbOffset=0; lbTotal=null; await loadMoreLeaderboard(rankFor); }
-  async function loadMoreLeaderboard(rankFor=null){ if(lbIsLoading) return; lbIsLoading=true; lbLoading.style.display='block'; try{ const data = await fetchLeaderboardPage(lbOffset, lbPage, rankFor); if (lbTotal==null) lbTotal = data.total ?? 0; renderLeaderboardItems(data.items||[], lbOffset); lbOffset += (data.items||[]).length; lbMeta.textContent = lbTotal ? `${lbOffset}/${lbTotal}` : ''; } finally { lbIsLoading=false; lbLoading.style.display='none'; } }
-  document.getElementById('leaderboard').addEventListener('scroll', async (e)=>{ const el=e.currentTarget; const near= el.scrollTop + el.clientHeight >= el.scrollHeight - 80; if(near && (lbTotal==null || lbOffset < lbTotal)) await loadMoreLeaderboard(); });
-
-  // init: default avatar + first LB
-  setAvatar(null); resetAndLoadLeaderboard().catch(()=>{});
+    // Sayfa açılışında (kullanıcı adı girmese de) leaderboard'ı yükle
+    resetAndLoadLeaderboard().catch(console.error);
   </script>
 </body>
 </html>
