@@ -1,63 +1,49 @@
-// Node.js Serverless Function (ioredis)
-module.exports.config = { runtime: 'nodejs' };
+export const config = { runtime: "edge" };
 
-const Redis = require('ioredis');
+import { Redis } from "@upstash/redis";
 
-let client;
-function getRedis() {
-  if (client) return client;
-  const url = process.env.REDIS_URL;
-  if (!url) throw new Error('REDIS_URL is not set');
-  let opts = {};
-  try { const u = new URL(url); if (u.protocol === 'rediss:') opts.tls = {}; } catch (_) {}
-  client = new Redis(url, opts);
-  return client;
+const redis = Redis.fromEnv();
+const NS = process.env.LAMUMU_NS || "lamumu:run";
+const RANK_KEY = `${NS}:rank`;
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
 }
 
-module.exports = async (req, res) => {
-  if (req.method !== 'GET') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
+export default async function handler(req) {
+  if (req.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
-  try {
-    const r = getRedis();
+  const { searchParams } = new URL(req.url);
+  const start = Math.max(0, Number(searchParams.get("start") ?? 0) | 0);
+  const count = Math.min(200, Math.max(1, Number(searchParams.get("count") ?? 50) | 0));
+  const rankFor = (searchParams.get("rankFor") || "").trim().toLowerCase();
 
-    // ?start=0&count=50&rankFor=handle
-    const url = new URL(req.url, 'http://localhost');
-    const start = Math.max(0, parseInt(url.searchParams.get('start') ?? '0', 10));
-    const count = Math.max(1, Math.min(200, parseInt(url.searchParams.get('count') ?? '50', 10)));
-    const rankForRaw = url.searchParams.get('rankFor');
-    const rankFor = rankForRaw ? String(rankForRaw).toLowerCase().replace(/^@/, '').trim() : null;
+  const total = await redis.zcard(RANK_KEY);
 
-    const totalPromise = r.zcard('smm:board');
-    const handles = await r.zrevrange('smm:board', start, start + count - 1);
-    const total = await totalPromise;
+  // Büyükten küçüğe (en iyi üstte)
+  const stop = start + count - 1;
+  const members = await redis.zrevrange(RANK_KEY, start, stop); // ["handle1", "handle2", ...]
 
-    let rank = null;
-    if (rankFor) {
-      const rv = await r.zrevrank('smm:board', rankFor);
-      if (rv !== null && rv !== undefined) rank = rv + 1; // 1-based
-    }
-
-    let items = [];
-    if (handles.length) {
-      const pipe = r.pipeline();
-      for (const h of handles) pipe.hmget(`smm:detail:${h}`, 'matched', 'timeMs', 'updatedAt');
-      const rows = await pipe.exec();
-      items = handles.map((h, i) => {
-        const arr = rows[i]?.[1] || [];
-        return {
-          handle: h,
-          matched: parseInt(arr?.[0] ?? '0', 10),
-          timeMs: parseInt(arr?.[1] ?? '0', 10),
-          updatedAt: parseInt(arr?.[2] ?? '0', 10)
-        };
-      });
-    }
-
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ items, start, count, total, rank }));
-  } catch (e) {
-    res.statusCode = 500; res.setHeader('content-type','application/json');
-    res.end(JSON.stringify({ error: String(e) }));
+  let items = [];
+  if (members.length) {
+    const rows = await Promise.all(
+      members.map((m) => redis.hmget(`${NS}:user:${m}`, "score", "timeMs"))
+    );
+    items = rows.map(([score, timeMs], i) => ({
+      handle: members[i],
+      score: Number(score ?? 0),
+      timeMs: Number(timeMs ?? 0),
+    }));
   }
-};
+
+  let rank = null;
+  if (rankFor) {
+    const r = await redis.zrevrank(RANK_KEY, rankFor);
+    rank = (r === null || r === undefined) ? null : (Number(r) + 1); // 1-based
+  }
+
+  return json({ items, total, rank });
+}
